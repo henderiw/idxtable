@@ -67,7 +67,7 @@ func (r *ipTable) Claim(addr string, d table.Route) error {
 	}
 	id := calculateIndex(claimIP, r.ipRange.From())
 	if !r.table.IsFree(id) {
-		return fmt.Errorf("ip address %s is already claimed", addr)
+		return fmt.Errorf("claim failed ip %s already claimed", addr)
 	}
 	return r.table.Claim(id, d)
 }
@@ -89,8 +89,8 @@ func (r *ipTable) Update(addr string, d table.Route) error {
 		return err
 	}
 	id := calculateIndex(claimIP, r.ipRange.From())
-	if !r.table.IsFree(id) {
-		return fmt.Errorf("ip address %s is already claimed", addr)
+	if r.table.IsFree(id) {
+		return fmt.Errorf("update failed ip %s not claimed", addr)
 	}
 	return r.table.Update(id, d)
 }
