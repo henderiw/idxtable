@@ -8,6 +8,7 @@ import (
 	"github.com/hansthienpondt/nipam/pkg/table"
 	"github.com/henderiw/idxtable/pkg/idxtable"
 	"go4.org/netipx"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 type IPTable interface {
@@ -22,7 +23,8 @@ type IPTable interface {
 	IsFree(addr string) bool
 	FindFree() (netip.Addr, error)
 
-	GetAll() []table.Route
+	GetAll() table.Routes
+	GetByLabel(selector labels.Selector) table.Routes
 }
 
 func New(from, to netip.Addr) (IPTable, error) {
@@ -119,7 +121,7 @@ func (r *ipTable) IsFree(addr string) bool {
 
 func (r *ipTable) FindFree() (netip.Addr, error) {
 	var addr netip.Addr
-	
+
 	id, err := r.table.FindFree()
 	if err != nil {
 		return addr, err
@@ -127,8 +129,22 @@ func (r *ipTable) FindFree() (netip.Addr, error) {
 	return calculateIPFromIndex(r.ipRange.From(), id), nil
 }
 
-func (r *ipTable) GetAll() []table.Route {
+func (r *ipTable) GetAll() table.Routes {
 	return r.table.GetAll()
+}
+
+func (r *ipTable) GetByLabel(selector labels.Selector) table.Routes {
+	var routes table.Routes
+
+	iter := r.table.Iterate()
+
+	for iter.Next() {
+		if selector.Matches(iter.Value().Labels()) {
+			routes = append(routes, iter.Value())
+		}
+	}
+
+	return routes
 }
 
 func (r *ipTable) validateIP(addr string) (netip.Addr, error) {
@@ -142,7 +158,6 @@ func (r *ipTable) validateIP(addr string) (netip.Addr, error) {
 	}
 	return claimIP, nil
 }
-
 
 func calculateIndex(ip, start netip.Addr) int64 {
 	// Calculate the index in the bitmap
