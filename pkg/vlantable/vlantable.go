@@ -10,6 +10,7 @@ import (
 type VLANTable interface {
 	Get(id int64) (labels.Set, error)
 	Claim(id int64, d labels.Set) error
+	ClaimDynamic(d labels.Set) (int64, error)
 	Release(id int64) error
 	Update(id int64, d labels.Set) error
 
@@ -73,6 +74,10 @@ func (r *vlanTable) Claim(id int64, d labels.Set) error {
 		return fmt.Errorf("id %d is already claimed", id)
 	}
 	return r.table.Claim(id, d)
+}
+
+func (r *vlanTable) ClaimDynamic(d labels.Set) (int64, error) {
+	return r.table.ClaimDynamic(d)
 }
 
 func (r *vlanTable) Release(id int64) error {
