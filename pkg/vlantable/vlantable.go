@@ -11,6 +11,8 @@ type VLANTable interface {
 	Get(id int64) (labels.Set, error)
 	Claim(id int64, d labels.Set) error
 	ClaimDynamic(d labels.Set) (int64, error)
+	ClaimRange(start, size int64, d labels.Set) error
+	ClaimSize(size int64, d labels.Set) error
 	Release(id int64) error
 	Update(id int64, d labels.Set) error
 
