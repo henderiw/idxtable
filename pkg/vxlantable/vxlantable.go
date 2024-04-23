@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-type IPTable interface {
+type VXLANTable interface {
 	Get(id int64) (labels.Set, error)
 	Claim(id int64, d labels.Set) error
 	Release(id int64) error
@@ -20,9 +20,10 @@ type IPTable interface {
 	FindFree() (int64, error)
 
 	GetAll() map[int64]labels.Set
+	GetByLabel(selector labels.Selector) map[int64]labels.Set
 }
 
-func New(offset, max int64) (IPTable, error) {
+func New(offset, max int64) (VXLANTable, error) {
 
 	t, err := idxtable.NewTable[labels.Set](
 		max-offset,
@@ -92,6 +93,19 @@ func (r *vxlanTable) FindFree() (int64, error) {
 
 func (r *vxlanTable) GetAll() map[int64]labels.Set {
 	return r.table.GetAll()
+}
+
+func (r *vxlanTable) GetByLabel(selector labels.Selector) map[int64]labels.Set {
+	entries := map[int64]labels.Set{}
+
+	iter := r.table.Iterate()
+
+	for iter.Next() {
+		if selector.Matches(iter.Value()) {
+			entries[iter.ID()] = iter.Value()
+		}
+	}
+	return entries
 }
 
 func (r *vxlanTable) calculateIndex(id int64) int64 {
