@@ -19,7 +19,7 @@ type IPTable interface {
 	IsFree(id int64) bool
 	FindFree() (int64, error)
 
-	GetAll() []labels.Set
+	GetAll() map[int64]labels.Set
 }
 
 func New(offset, max int64) (IPTable, error) {
@@ -90,7 +90,7 @@ func (r *vxlanTable) FindFree() (int64, error) {
 	return id + r.offset, nil
 }
 
-func (r *vxlanTable) GetAll() []labels.Set {
+func (r *vxlanTable) GetAll() map[int64]labels.Set {
 	return r.table.GetAll()
 }
 

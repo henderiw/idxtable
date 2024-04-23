@@ -130,7 +130,11 @@ func (r *ipTable) FindFree() (netip.Addr, error) {
 }
 
 func (r *ipTable) GetAll() table.Routes {
-	return r.table.GetAll()
+	var routes table.Routes
+	for _, route := range r.table.GetAll() {
+		routes = append(routes, route)
+	}
+	return routes
 }
 
 func (r *ipTable) GetByLabel(selector labels.Selector) table.Routes {

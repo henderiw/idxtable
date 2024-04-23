@@ -26,7 +26,7 @@ type Table[T1 any] interface {
 	FindFreeRange(min, size int64) (map[int64]T1, error)
 	FindFreeSize(size int64) (map[int64]T1, error)
 
-	GetAll() []T1
+	GetAll() map[int64]T1
 }
 
 type ValidationFn func(id int64) error
@@ -101,9 +101,9 @@ func (r *table[T1]) ClaimRange(start, size int64, d T1) error {
 	if err != nil {
 		return err
 	}
-	for id, entry := range entries {
+	for id := range entries {
 		// getting an error is unlikely as we have a lock
-		if err := r.add(id, entry, false); err != nil {
+		if err := r.add(id, d, false); err != nil {
 			return err
 		}
 	}
@@ -313,15 +313,15 @@ func (r *table[T1]) delete(id int64) error {
 	return nil
 }
 
-func (r *table[T1]) GetAll() []T1 {
+func (r *table[T1]) GetAll() map[int64]T1 {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
-	entries := make([]T1, 0, len(r.table))
+	entries := make(map[int64]T1, len(r.table))
 
 	iter := r.Iterate()
 	for iter.Next() {
-		entries = append(entries, iter.Value())
+		entries[iter.ID()] = iter.Value()
 	}
 	return entries
 }
