@@ -98,8 +98,7 @@ func (r *table[T1]) ClaimDynamic(d T1) (int64, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	free := r.IterateFree()
-
+	free := r.iterateFree()
 	if free.Next() {
 		if err := r.add(free.ID(), d, false); err != nil {
 			return 0, err
