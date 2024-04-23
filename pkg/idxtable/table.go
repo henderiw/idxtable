@@ -10,6 +10,7 @@ import (
 type Table[T1 any] interface {
 	Get(id int64) (T1, error)
 	Claim(id int64, d T1) error
+	ClaimDynamic(d T1) (int64, error)
 	ClaimRange(start, size int64, d T1) error
 	ClaimSize(size int64, d T1) error
 	Release(id int64) error
@@ -91,6 +92,21 @@ func (r *table[T1]) Claim(id int64, d T1) error {
 	defer r.m.Unlock()
 
 	return r.add(id, d, false)
+}
+
+func (r *table[T1]) ClaimDynamic(d T1) (int64, error) {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	free := r.IterateFree()
+
+	if free.Next() {
+		if err := r.add(free.ID(), d, false); err != nil {
+			return 0, err
+		}
+		return free.ID(), nil
+	}
+	return 0, fmt.Errorf("no free entry found")
 }
 
 func (r *table[T1]) ClaimRange(start, size int64, d T1) error {
