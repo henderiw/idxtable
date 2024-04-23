@@ -24,7 +24,6 @@ type VLANTable interface {
 	GetByLabel(selector labels.Selector) map[int64]labels.Set
 }
 
-
 var initEntries = map[int64]labels.Set{
 	0:    map[string]string{"type": "untagged", "status": "reserved"},
 	1:    map[string]string{"type": "untagged", "status": "reserved"},
@@ -78,6 +77,14 @@ func (r *vlanTable) Claim(id int64, d labels.Set) error {
 
 func (r *vlanTable) ClaimDynamic(d labels.Set) (int64, error) {
 	return r.table.ClaimDynamic(d)
+}
+
+func (r *vlanTable) ClaimRange(start, size int64, d labels.Set) error {
+	return r.table.ClaimRange(start, size, d)
+}
+
+func (r *vlanTable) ClaimSize(size int64, d labels.Set) error {
+	return r.table.ClaimSize(size, d)
 }
 
 func (r *vlanTable) Release(id int64) error {
