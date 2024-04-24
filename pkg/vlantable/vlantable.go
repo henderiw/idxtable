@@ -95,8 +95,8 @@ func (r *vlanTable) Release(id int64) error {
 
 func (r *vlanTable) Update(id int64, d labels.Set) error {
 	id = r.calculateIndex(id)
-	if !r.table.IsFree(id) {
-		return fmt.Errorf("id %d is already claimed", id)
+	if r.table.IsFree(id) {
+		return fmt.Errorf("cannot update, id %d is not claimed", id)
 	}
 	return r.table.Update(id, d)
 }
