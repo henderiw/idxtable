@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/henderiw/idxtable/pkg/tree/id32"
-	"github.com/henderiw/idxtable/pkg/vlantable"
+	"github.com/henderiw/idxtable/pkg/vlantree"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -147,7 +147,7 @@ func main() {
 
 	fmt.Println("lastID", id32.LastID(id32.NewID(0, 20)))
 
-	vt := vlantable.New()
+	vt := vlantree.New()
 	/*
 		vt = vlantable2.New()
 		for i := 0; i <= 4095; i++ {
@@ -169,7 +169,7 @@ func main() {
 		}
 	*/
 
-	vt = vlantable.New()
+	vt = vlantree.New()
 	vt.ClaimRange("1000-2000", map[string]string{"range": "test"})
 
 	handleId(vt, 1000)
@@ -177,7 +177,7 @@ func main() {
 
 }
 
-func handleId(vt *vlantable.VLANTable, id uint16) {
+func handleId(vt *vlantree.VLANTree, id uint16) {
 	e, err := vt.Get(id)
 	if err != nil {
 		fmt.Println(err)

@@ -22,7 +22,7 @@ func TestNewTable(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			r := NewTable[string](tc.size)
-			if r.Count() != tc.expectedEntries {
+			if r.Size() != tc.expectedEntries {
 				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(r.GetAll()))
 			}
 		})
@@ -73,7 +73,7 @@ func TestClaim(t *testing.T) {
 					t.Errorf("%s no expecting failed claim entry: %d\n", name, id)
 				}
 			}
-			if r.Count() != tc.expectedEntries {
+			if r.Size() != tc.expectedEntries {
 				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(r.GetAll()))
 			}
 		})
@@ -142,7 +142,7 @@ func TestRelease(t *testing.T) {
 				}
 			}
 
-			if r.Count() != tc.expectedEntries {
+			if r.Size() != tc.expectedEntries {
 				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(r.GetAll()))
 			}
 		})
@@ -245,7 +245,7 @@ func TestClaimRange(t *testing.T) {
 				}
 			}
 
-			if r.Count() != tc.expectedEntries {
+			if r.Size() != tc.expectedEntries {
 				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(r.GetAll()))
 			}
 		})
@@ -284,7 +284,7 @@ func TestClaimSize(t *testing.T) {
 			}
 			assert.NoError(t, err)
 
-			if r.Count() != tc.expectedEntries {
+			if r.Size() != tc.expectedEntries {
 				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(r.GetAll()))
 			}
 		})

@@ -17,7 +17,7 @@ type IPTable interface {
 	Release(addr string) error
 	Update(addr string, d table.Route) error
 
-	Count() int
+	Size() int
 	Has(addr string) bool
 
 	IsFree(addr string) bool
@@ -92,8 +92,8 @@ func (r *ipTable) Update(addr string, d table.Route) error {
 	return r.table.Update(id, d)
 }
 
-func (r *ipTable) Count() int {
-	return r.table.Count()
+func (r *ipTable) Size() int {
+	return r.table.Size()
 }
 
 func (r *ipTable) Has(addr string) bool {

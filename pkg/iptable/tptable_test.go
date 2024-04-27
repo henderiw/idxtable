@@ -56,7 +56,7 @@ func TestClaim(t *testing.T) {
 					t.Errorf("%s no expecting failed claim entry: %s\n", name, addr)
 				}
 			}
-			if r.Count() != tc.expectedEntries {
+			if r.Size() != tc.expectedEntries {
 				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(r.GetAll()))
 			}
 

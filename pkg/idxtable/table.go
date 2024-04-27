@@ -11,7 +11,6 @@ type Table[T1 any] interface {
 	Claim(id int64, d T1) error
 	ClaimDynamic(d T1) (Entry[T1], error)
 	ClaimRange(start, size int64, d T1) error
-	ClaimTable(start, size int64, d T1) error
 	ClaimSize(size int64, d T1) (Entries[T1], error)
 	Release(id int64) error
 	Update(id int64, d T1) error
@@ -19,7 +18,7 @@ type Table[T1 any] interface {
 	Iterate() *Iterator[T1]
 	IterateFree() *Iterator[T1]
 
-	Count() int
+	Size() int
 	Has(id int64) bool
 
 	IsFree(id int64) bool
@@ -111,26 +110,6 @@ func (r *table[T1]) ClaimRange(start, size int64, d T1) error {
 	return nil
 }
 
-func (r *table[T1]) ClaimTable(start, size int64, d T1) error {
-	r.m.Lock()
-	defer r.m.Unlock()
-
-	ids, err := r.findFreeRange(start, size)
-	if err != nil {
-		return err
-	}
-	t := NewTable[T1](size)
-	for _, id := range ids {
-		id := id
-		e := NewTableEntry(id, d, t)
-		// getting an error is unlikely as we have a lock
-		if err := r.add(e); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (r *table[T1]) ClaimSize(size int64, d T1) (Entries[T1], error) {
 	r.m.Lock()
 	defer r.m.Unlock()
@@ -212,7 +191,7 @@ func (r *table[T1]) iterateFree() *Iterator[T1] {
 	return &Iterator[T1]{current: -1, keys: keys, table: r.table}
 }
 
-func (r *table[T1]) Count() int {
+func (r *table[T1]) Size() int {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
