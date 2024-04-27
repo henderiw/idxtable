@@ -3,10 +3,10 @@ package idxtable
 type Iterator[T1 any] struct {
 	current int64
 	keys    []int64
-	table   map[int64]T1
+	table   map[int64]Entry[T1]
 }
 
-func (r *Iterator[T1]) Value() T1 {
+func (r *Iterator[T1]) Value() Entry[T1] {
 	return r.table[r.keys[r.current]]
 }
 

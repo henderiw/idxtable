@@ -1,5 +1,6 @@
 package vxlantable
 
+/*
 import (
 	"fmt"
 
@@ -112,3 +113,4 @@ func (r *vxlanTable) calculateIndex(id int64) int64 {
 	// Calculate the index in the bitmap
 	return id - r.offset
 }
+*/
