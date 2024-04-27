@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/henderiw/idxtable/pkg/tree"
 	"github.com/henderiw/idxtable/pkg/tree/id32"
 	"github.com/tj/assert"
 	"k8s.io/apimachinery/pkg/labels"
@@ -39,14 +38,12 @@ func TestClaim(t *testing.T) {
 			r := New(uint16(vlanRange.From().ID()), uint16(vlanRange.To().ID()))
 
 			for id, labels := range tc.newSuccessEntries {
-				e := tree.NewEntry(id32.NewID(uint32(id), 32), labels)
-				err := r.Claim(id, e)
+				err := r.Claim(id, labels)
 				assert.NoError(t, err)
 
 			}
 			for id, labels := range tc.newFailedEntries {
-				e := tree.NewEntry(id32.NewID(uint32(id), 32), labels)
-				err := r.Claim(id, e)
+				err := r.Claim(id, labels)
 				assert.Error(t, err)
 			}
 			for id := range tc.newSuccessEntries {

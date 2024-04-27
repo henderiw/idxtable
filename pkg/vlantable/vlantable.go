@@ -5,14 +5,16 @@ import (
 
 	"github.com/henderiw/idxtable/pkg/idxtable"
 	"github.com/henderiw/idxtable/pkg/tree"
+	"github.com/henderiw/idxtable/pkg/tree/id32"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 type VLANTable interface {
 	Get(id uint16) (tree.Entry, error)
-	Claim(u uint16, e tree.Entry) error
+	Claim(u uint16, labels labels.Set) error
+	ClaimFree(labels labels.Set) (tree.Entry, error)
 	Release(id uint16) error
-	Update(id uint16, e tree.Entry) error
+	Update(id uint16, labels labels.Set) error
 
 	Size() int
 	Has(id uint16) bool
@@ -54,7 +56,7 @@ func (r *vlanTable) Get(id uint16) (tree.Entry, error) {
 	return e.Data(), nil
 }
 
-func (r *vlanTable) Claim(id uint16, e tree.Entry) error {
+func (r *vlanTable) Claim(id uint16, labels labels.Set) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
@@ -63,7 +65,25 @@ func (r *vlanTable) Claim(id uint16, e tree.Entry) error {
 	if !r.table.IsFree(newid) {
 		return fmt.Errorf("claim failed id %d already claimed", newid)
 	}
-	return r.table.Claim(newid, e)
+
+	treeId := id32.NewID(uint32(newid), 32)
+	treeEntry := tree.NewEntry(treeId.Copy(), labels)
+	return r.table.Claim(newid, treeEntry)
+}
+
+func (r *vlanTable) ClaimFree(labels labels.Set) (tree.Entry, error) {
+	// Validate input
+
+	id, err := r.FindFree()
+	if err != nil {
+		return nil, err
+	}
+	if err := r.Claim(id, labels); err != nil {
+		return nil, err
+	}
+	treeId := id32.NewID(uint32(id), 32)
+	treeEntry := tree.NewEntry(treeId.Copy(), labels)
+	return treeEntry, nil
 }
 
 func (r *vlanTable) Release(id uint16) error {
@@ -75,13 +95,15 @@ func (r *vlanTable) Release(id uint16) error {
 	return r.table.Release(newid)
 }
 
-func (r *vlanTable) Update(id uint16, e tree.Entry) error {
+func (r *vlanTable) Update(id uint16, labels labels.Set) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
 	}
 	newid := calculateIndex(id, r.start)
-	return r.table.Update(newid, e)
+	treeId := id32.NewID(uint32(newid), 32)
+	treeEntry := tree.NewEntry(treeId.Copy(), labels)
+	return r.table.Update(newid, treeEntry)
 }
 
 func (r *vlanTable) Size() int {
