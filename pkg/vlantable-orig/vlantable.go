@@ -1,5 +1,6 @@
 package vlantable
 
+/*
 import (
 	"fmt"
 
@@ -142,3 +143,4 @@ func (r *vlanTable) calculateIndex(id int64) int64 {
 	// Calculate the index in the bitmap
 	return id - r.offset
 }
+*/

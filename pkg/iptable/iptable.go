@@ -27,20 +27,13 @@ type IPTable interface {
 	GetByLabel(selector labels.Selector) table.Routes
 }
 
-func New(from, to netip.Addr) (IPTable, error) {
-	t, err := idxtable.NewTable[table.Route](
-		int64(numIPs(from, to)),
-		map[int64]table.Route{},
-		nil,
-	)
-	if err != nil {
-		return nil, err
-	}
+func New(from, to netip.Addr) IPTable {
 	return &ipTable{
-		table:   t,
+		table: idxtable.NewTable[table.Route](
+			int64(numIPs(from, to)),
+		),
 		ipRange: netipx.IPRangeFrom(from, to),
-	}, nil
-
+	}
 }
 
 type ipTable struct {
@@ -56,7 +49,11 @@ func (r *ipTable) Get(addr string) (table.Route, error) {
 		return route, err
 	}
 	id := calculateIndex(claimIP, r.ipRange.From())
-	return r.table.Get(id)
+	e, err := r.table.Get(id)
+	if err != nil {
+		return table.Route{}, err
+	}
+	return e.Data(), nil
 }
 
 func (r *ipTable) Claim(addr string, d table.Route) error {
@@ -131,8 +128,8 @@ func (r *ipTable) FindFree() (netip.Addr, error) {
 
 func (r *ipTable) GetAll() table.Routes {
 	var routes table.Routes
-	for _, route := range r.table.GetAll() {
-		routes = append(routes, route)
+	for _, entry := range r.table.GetAll() {
+		routes = append(routes, entry.Data())
 	}
 	return routes
 }
@@ -143,8 +140,9 @@ func (r *ipTable) GetByLabel(selector labels.Selector) table.Routes {
 	iter := r.table.Iterate()
 
 	for iter.Next() {
-		if selector.Matches(iter.Value().Labels()) {
-			routes = append(routes, iter.Value())
+		route := iter.Value().Data()
+		if selector.Matches(route.Labels()) {
+			routes = append(routes, iter.Value().Data())
 		}
 	}
 

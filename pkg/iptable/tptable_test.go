@@ -35,8 +35,7 @@ func TestClaim(t *testing.T) {
 			ipRange, err := netipx.ParseIPRange(tc.ipRange)
 			assert.NoError(t, err)
 
-			r, err := New(ipRange.From(), ipRange.To())
-			assert.NoError(t, err)
+			r := New(ipRange.From(), ipRange.To())
 
 			for addr, d := range tc.newSuccessEntries {
 				err := r.Claim(addr, d)

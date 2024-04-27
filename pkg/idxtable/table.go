@@ -1,18 +1,18 @@
 package idxtable
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"sync"
 )
 
 type Table[T1 any] interface {
-	Get(id int64) (T1, error)
+	Get(id int64) (Entry[T1], error)
 	Claim(id int64, d T1) error
-	ClaimDynamic(d T1) (int64, error)
+	ClaimDynamic(d T1) (Entry[T1], error)
 	ClaimRange(start, size int64, d T1) error
-	ClaimSize(size int64, d T1) error
+	ClaimTable(start, size int64, d T1) error
+	ClaimSize(size int64, d T1) (Entries[T1], error)
 	Release(id int64) error
 	Update(id int64, d T1) error
 
@@ -24,123 +24,132 @@ type Table[T1 any] interface {
 
 	IsFree(id int64) bool
 	FindFree() (int64, error)
-	FindFreeRange(min, size int64) (map[int64]T1, error)
-	FindFreeSize(size int64) (map[int64]T1, error)
+	FindFreeRange(min, size int64) ([]int64, error)
+	FindFreeSize(size int64) ([]int64, error)
 
-	GetAll() map[int64]T1
+	GetAll() Entries[T1]
 }
 
-type ValidationFn func(id int64) error
-
-func NewTable[T1 any](s int64, initEntries map[int64]T1, v ValidationFn) (Table[T1], error) {
+func NewTable[T1 any](size int64) Table[T1] {
 	r := &table[T1]{
-		m:          new(sync.RWMutex),
-		table:      map[int64]T1{},
-		size:       s,
-		validateFn: v,
+		m:     new(sync.RWMutex),
+		table: map[int64]Entry[T1]{},
+		size:  size,
 	}
 
-	var errm error
-	for id, d := range initEntries {
-		id := id
-		if err := r.add(id, d, true); err != nil {
-			errm = errors.Join(errm, err)
-		}
-	}
-
-	return r, errm
+	return r
 }
 
 type table[T1 any] struct {
-	m          *sync.RWMutex
-	table      map[int64]T1
-	size       int64
-	validateFn ValidationFn
+	m     *sync.RWMutex
+	table map[int64]Entry[T1]
+	size  int64
 }
 
-func (r *table[T1]) validate(id int64, init bool) error {
+func (r *table[T1]) validate(id int64) error {
 	if id > r.size-1 {
 		return fmt.Errorf("id %d is bigger then max allowed entries: %d", id, r.size-1)
-
 	}
-	if r.validateFn != nil && !init {
-		if err := r.validateFn(id); err != nil {
-			return err
-		}
+	if id < 0 {
+		return fmt.Errorf("id %d is smaller then min allowed entries: %d", id, 0)
 	}
 	return nil
 }
 
-func (r *table[T1]) Get(id int64) (T1, error) {
+func (r *table[T1]) Get(id int64) (Entry[T1], error) {
 	r.m.RLock()
 	defer r.m.RUnlock()
-	var d T1
 
-	if err := r.validate(id, false); err != nil {
-		return d, err
+	if err := r.validate(id); err != nil {
+		return nil, err
 	}
 
-	d, ok := r.table[id]
+	e, ok := r.table[id]
 	if !ok {
-		return d, fmt.Errorf("no match found for: %v", id)
+		return nil, fmt.Errorf("no entry found for: %d", id)
 	}
-	return d, nil
+	return e, nil
 }
 
 func (r *table[T1]) Claim(id int64, d T1) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	return r.add(id, d, false)
+	return r.add(NewEntry(id, d))
 }
 
-func (r *table[T1]) ClaimDynamic(d T1) (int64, error) {
+func (r *table[T1]) ClaimDynamic(d T1) (Entry[T1], error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
 	free := r.iterateFree()
 	if free.Next() {
-		if err := r.add(free.ID(), d, false); err != nil {
-			return 0, err
+		e := NewEntry(free.ID(), d)
+		if err := r.add(e); err != nil {
+			return nil, err
 		}
-		return free.ID(), nil
+		return e, nil
 	}
-	return 0, fmt.Errorf("no free entry found")
+	return nil, fmt.Errorf("no free entry found")
 }
 
 func (r *table[T1]) ClaimRange(start, size int64, d T1) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	entries, err := r.findFreeRange(start, size)
+	ids, err := r.findFreeRange(start, size)
 	if err != nil {
 		return err
 	}
-	for id := range entries {
+	for _, id := range ids {
+		id := id
 		// getting an error is unlikely as we have a lock
-		if err := r.add(id, d, false); err != nil {
+		if err := r.add(NewEntry(id, d)); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *table[T1]) ClaimSize(size int64, d T1) error {
+func (r *table[T1]) ClaimTable(start, size int64, d T1) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	entries, err := r.findFreeSize(size)
+	ids, err := r.findFreeRange(start, size)
 	if err != nil {
 		return err
 	}
-	for id, entry := range entries {
+	t := NewTable[T1](size)
+	for _, id := range ids {
 		id := id
+		e := NewTableEntry(id, d, t)
 		// getting an error is unlikely as we have a lock
-		if err := r.add(id, entry, false); err != nil {
+		if err := r.add(e); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (r *table[T1]) ClaimSize(size int64, d T1) (Entries[T1], error) {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	ids, err := r.findFreeSize(size)
+	if err != nil {
+		return nil, err
+	}
+	entries := Entries[T1]{}
+	for _, id := range ids {
+		id := id
+		e := NewEntry(id, d)
+		// getting an error is unlikely as we have a lock
+		if err := r.add(e); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, nil
 }
 
 func (r *table[T1]) Release(id int64) error {
@@ -154,7 +163,7 @@ func (r *table[T1]) Update(id int64, d T1) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	return r.update(id, d)
+	return r.update(NewEntry(id, d))
 }
 
 func (r *table[T1]) Iterate() *Iterator[T1] {
@@ -237,13 +246,13 @@ func (r *table[T1]) FindFree() (int64, error) {
 	return 0, fmt.Errorf("no free entry found")
 }
 
-func (r *table[T1]) FindFreeRange(start, size int64) (map[int64]T1, error) {
+func (r *table[T1]) FindFreeRange(start, size int64) ([]int64, error) {
 	r.m.RLock()
 	defer r.m.RUnlock()
 	return r.findFreeRange(start, size)
 }
 
-func (r *table[T1]) findFreeRange(start, size int64) (map[int64]T1, error) {
+func (r *table[T1]) findFreeRange(start, size int64) ([]int64, error) {
 	end := start + size - 1
 
 	if start > r.size-1 {
@@ -253,7 +262,7 @@ func (r *table[T1]) findFreeRange(start, size int64) (map[int64]T1, error) {
 		return nil, fmt.Errorf("end %d is bigger then max allowed entries: %d", end, r.size)
 	}
 
-	entries := map[int64]T1{}
+	entries := []int64{}
 	free := r.iterateFree()
 	for free.Next() {
 		if free.ID() < start {
@@ -261,36 +270,36 @@ func (r *table[T1]) findFreeRange(start, size int64) (map[int64]T1, error) {
 		}
 		switch {
 		case free.ID() == start:
-			entries[free.ID()] = free.Value()
+			entries = append(entries, free.ID())
 		case free.ID() > start && free.ID() < end:
 			if !free.IsConsecutive() {
 				return nil, fmt.Errorf("entry %d in use in range: start: %d, end %d", free.ID(), start, end)
 			}
-			entries[free.ID()] = free.Value()
+			entries = append(entries, free.ID())
 		default:
-			entries[free.ID()] = free.Value()
+			entries = append(entries, free.ID())
 			return entries, nil
 		}
 	}
 	return nil, fmt.Errorf("could not find free range that fit in start %d, size %d", start, size)
 }
 
-func (r *table[T1]) FindFreeSize(size int64) (map[int64]T1, error) {
+func (r *table[T1]) FindFreeSize(size int64) ([]int64, error) {
 	r.m.RLock()
 	defer r.m.RUnlock()
 	return r.findFreeSize(size)
 }
 
-func (r *table[T1]) findFreeSize(size int64) (map[int64]T1, error) {
+func (r *table[T1]) findFreeSize(size int64) ([]int64, error) {
 	if size > r.size {
 		return nil, fmt.Errorf("size %d is bigger then max allowed entries: %d", size, r.size)
 	}
-	entries := map[int64]T1{}
+	entries := []int64{}
 	free := r.iterateFree()
 	i := int64(0)
 	for free.Next() {
 		i++
-		entries[free.ID()] = free.Value()
+		entries = append(entries, free.ID())
 		if i > size-1 {
 			return entries, nil
 		}
@@ -298,45 +307,45 @@ func (r *table[T1]) findFreeSize(size int64) (map[int64]T1, error) {
 	return nil, fmt.Errorf("could not find free entries that fit in size %d", size)
 }
 
-func (r *table[T1]) add(id int64, d T1, init bool) error {
-	if err := r.validate(id, init); err != nil {
+func (r *table[T1]) add(e Entry[T1]) error {
+	if err := r.validate(e.ID()); err != nil {
 		return err
 	}
-	if !r.isFree(id) {
-		return fmt.Errorf("entry %d already exists", id)
+	if !r.isFree(e.ID()) {
+		return fmt.Errorf("entry %d already exists", e.ID())
 	}
-	r.table[id] = d
+	r.table[e.ID()] = e
 	return nil
 }
 
-func (r *table[T1]) update(id int64, d T1) error {
-	if err := r.validate(id, false); err != nil {
+func (r *table[T1]) update(e Entry[T1]) error {
+	if err := r.validate(e.ID()); err != nil {
 		return err
 	}
-	if r.isFree(id) {
-		return fmt.Errorf("entry %d not found", id)
+	if r.isFree(e.ID()) {
+		return fmt.Errorf("entry %d not created", e.ID())
 	}
-	r.table[id] = d
+	r.table[e.ID()] = e
 	return nil
 }
 
 func (r *table[T1]) delete(id int64) error {
-	if err := r.validate(id, false); err != nil {
+	if err := r.validate(id); err != nil {
 		return err
 	}
 	delete(r.table, id)
 	return nil
 }
 
-func (r *table[T1]) GetAll() map[int64]T1 {
+func (r *table[T1]) GetAll() Entries[T1] {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
-	entries := make(map[int64]T1, len(r.table))
+	entries := make([]Entry[T1], len(r.table))
 
 	iter := r.Iterate()
 	for iter.Next() {
-		entries[iter.ID()] = iter.Value()
+		entries = append(entries, iter.Value())
 	}
 	return entries
 }
