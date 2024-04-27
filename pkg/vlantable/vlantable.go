@@ -4,15 +4,15 @@ import (
 	"fmt"
 
 	"github.com/henderiw/idxtable/pkg/idxtable"
-	"github.com/henderiw/idxtable/pkg/vlantree"
+	"github.com/henderiw/idxtable/pkg/tree"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 type VLANTable interface {
-	Get(id uint16) (vlantree.Entry, error)
-	Claim(u uint16, e vlantree.Entry) error
+	Get(id uint16) (tree.Entry, error)
+	Claim(u uint16, e tree.Entry) error
 	Release(id uint16) error
-	Update(id uint16, e vlantree.Entry) error
+	Update(id uint16, e tree.Entry) error
 
 	Size() int
 	Has(id uint16) bool
@@ -20,13 +20,13 @@ type VLANTable interface {
 	IsFree(id uint16) bool
 	FindFree() (uint16, error)
 
-	GetAll() vlantree.Entries
-	GetByLabel(selector labels.Selector) vlantree.Entries
+	GetAll() tree.Entries
+	GetByLabel(selector labels.Selector) tree.Entries
 }
 
 func New(start, end uint16) VLANTable {
 	return &vlanTable{
-		table: idxtable.NewTable[vlantree.Entry](
+		table: idxtable.NewTable[tree.Entry](
 			int64(end - start + 1),
 		),
 		start: start,
@@ -35,13 +35,13 @@ func New(start, end uint16) VLANTable {
 }
 
 type vlanTable struct {
-	table idxtable.Table[vlantree.Entry]
+	table idxtable.Table[tree.Entry]
 	start uint16
 	end   uint16
 }
 
-func (r *vlanTable) Get(id uint16) (vlantree.Entry, error) {
-	var entry vlantree.Entry
+func (r *vlanTable) Get(id uint16) (tree.Entry, error) {
+	var entry tree.Entry
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return entry, err
@@ -54,7 +54,7 @@ func (r *vlanTable) Get(id uint16) (vlantree.Entry, error) {
 	return e.Data(), nil
 }
 
-func (r *vlanTable) Claim(id uint16, e vlantree.Entry) error {
+func (r *vlanTable) Claim(id uint16, e tree.Entry) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
@@ -75,7 +75,7 @@ func (r *vlanTable) Release(id uint16) error {
 	return r.table.Release(newid)
 }
 
-func (r *vlanTable) Update(id uint16, e vlantree.Entry) error {
+func (r *vlanTable) Update(id uint16, e tree.Entry) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
@@ -114,16 +114,16 @@ func (r *vlanTable) FindFree() (uint16, error) {
 	return calculateIDFromIndex(r.start, id), nil
 }
 
-func (r *vlanTable) GetAll() vlantree.Entries {
-	var entries vlantree.Entries
+func (r *vlanTable) GetAll() tree.Entries {
+	var entries tree.Entries
 	for _, entry := range r.table.GetAll() {
 		entries = append(entries, entry.Data())
 	}
 	return entries
 }
 
-func (r *vlanTable) GetByLabel(selector labels.Selector) vlantree.Entries {
-	var entries vlantree.Entries
+func (r *vlanTable) GetByLabel(selector labels.Selector) tree.Entries {
+	var entries tree.Entries
 
 	iter := r.table.Iterate()
 

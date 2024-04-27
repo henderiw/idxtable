@@ -1,5 +1,7 @@
 package vlantree
 
+/*
+
 import "k8s.io/apimachinery/pkg/labels"
 
 type Enries []Entry
@@ -24,3 +26,5 @@ type Entries []Entry
 
 func (r entry) ID() uint16         { return r.id }
 func (r entry) Labels() labels.Set { return r.labels }
+
+*/

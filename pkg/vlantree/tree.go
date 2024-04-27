@@ -37,7 +37,7 @@ func (r *VLANTree) Clone() *VLANTree {
 	}
 }
 
-func (r *VLANTree) Get(id uint16) (Entry, error) {
+func (r *VLANTree) Get(id uint16) (tree.Entry, error) {
 	// returns true if exact match is found.
 	r.m.RLock()
 	defer r.m.RUnlock()
@@ -46,7 +46,7 @@ func (r *VLANTree) Get(id uint16) (Entry, error) {
 	for iter.Next() {
 		if uint16(iter.Entry().ID().ID()) == id &&
 			iter.Entry().ID().Length() == addressbitsize {
-			return NewEntry(id, iter.Entry().Labels()), nil
+			return iter.Entry(), nil
 		}
 	}
 	return nil, fmt.Errorf("entry %d not found", id)
@@ -76,7 +76,7 @@ func (r *VLANTree) Claim(id uint16, labels labels.Set) error {
 	return r.set(treeId, treeEntry)
 }
 
-func (r *VLANTree) ClaimFree(labels labels.Set) (Entry, error) {
+func (r *VLANTree) ClaimFree(labels labels.Set) (tree.Entry, error) {
 
 	id, err := r.findFree()
 	if err != nil {
@@ -90,7 +90,7 @@ func (r *VLANTree) ClaimFree(labels labels.Set) (Entry, error) {
 	if err := r.set(treeId, treeEntry); err != nil {
 		return nil, err
 	}
-	return NewEntry(id, labels), nil
+	return treeEntry, nil
 }
 
 func (r *VLANTree) ClaimRange(s string, labels labels.Set) error {
