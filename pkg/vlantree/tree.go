@@ -223,12 +223,12 @@ func (r *VLANTree) GetByLabel(selector labels.Selector) tree.Entries {
 	return entries
 }
 
-func (r *VLANTree) GetAll() Entries {
-	entries := Entries{}
+func (r *VLANTree) GetAll() tree.Entries {
+	entries := tree.Entries{}
 
 	iter := r.Iterate()
 	for iter.Next() {
-		entries = append(entries, NewEntry(uint16(iter.Entry().ID().ID()), iter.Entry().Labels()))
+		entries = append(entries, iter.Entry())
 	}
 
 	return entries
