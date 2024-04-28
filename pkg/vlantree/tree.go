@@ -93,6 +93,19 @@ func (r *VLANTree) Claim(id uint16, labels labels.Set) error {
 	return r.set(treeId, treeEntry)
 }
 
+func (r *VLANTree) ClaimID(id tree.ID, labels labels.Set) error {
+	// TODO validate lenggth
+	if err := r.validate(uint16(id.ID())); err != nil {
+		return err
+	}
+	
+	treeEntry := tree.NewEntry(id.Copy(), labels)
+
+	r.m.Lock()
+	defer r.m.Unlock()
+	return r.set(id, treeEntry)
+}
+
 func (r *VLANTree) ClaimFree(labels labels.Set) (tree.Entry, error) {
 
 	id, err := r.findFree()
