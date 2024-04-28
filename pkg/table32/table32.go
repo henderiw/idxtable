@@ -1,4 +1,4 @@
-package vlantable
+package table32
 
 import (
 	"fmt"
@@ -9,25 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-type VLANTable interface {
-	Get(id uint16) (tree.Entry, error)
-	Claim(u uint16, labels labels.Set) error
-	ClaimFree(labels labels.Set) (tree.Entry, error)
-	Release(id uint16) error
-	Update(id uint16, labels labels.Set) error
-
-	Size() int
-	Has(id uint16) bool
-
-	IsFree(id uint16) bool
-	FindFree() (uint16, error)
-
-	GetAll() tree.Entries
-	GetByLabel(selector labels.Selector) tree.Entries
-}
-
-func New(start, end uint16) VLANTable {
-	return &vlanTable{
+func New(start, end uint32) *Table32 {
+	return &Table32{
 		table: idxtable.NewTable[tree.Entry](
 			int64(end - start + 1),
 		),
@@ -36,13 +19,13 @@ func New(start, end uint16) VLANTable {
 	}
 }
 
-type vlanTable struct {
+type Table32 struct {
 	table idxtable.Table[tree.Entry]
-	start uint16
-	end   uint16
+	start uint32
+	end   uint32
 }
 
-func (r *vlanTable) Get(id uint16) (tree.Entry, error) {
+func (r *Table32) Get(id uint32) (tree.Entry, error) {
 	var entry tree.Entry
 	// Validate input
 	if err := r.validateID(id); err != nil {
@@ -56,14 +39,14 @@ func (r *vlanTable) Get(id uint16) (tree.Entry, error) {
 	return e.Data(), nil
 }
 
-func (r *vlanTable) Claim(id uint16, labels labels.Set) error {
+func (r *Table32) Claim(id uint32, labels labels.Set) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
 	}
 	newid := calculateIndex(id, r.start)
 	if !r.table.IsFree(newid) {
-		return fmt.Errorf("claim failed id %d already claimed", newid)
+		return fmt.Errorf("claim failed id %d already claimed", calculateIDFromIndex(r.start, newid))
 	}
 
 	treeId := id32.NewID(uint32(newid), 32)
@@ -71,7 +54,7 @@ func (r *vlanTable) Claim(id uint16, labels labels.Set) error {
 	return r.table.Claim(newid, treeEntry)
 }
 
-func (r *vlanTable) ClaimFree(labels labels.Set) (tree.Entry, error) {
+func (r *Table32) ClaimFree(labels labels.Set) (tree.Entry, error) {
 	// Validate input
 
 	id, err := r.FindFree()
@@ -86,7 +69,7 @@ func (r *vlanTable) ClaimFree(labels labels.Set) (tree.Entry, error) {
 	return treeEntry, nil
 }
 
-func (r *vlanTable) Release(id uint16) error {
+func (r *Table32) Release(id uint32) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
@@ -95,7 +78,7 @@ func (r *vlanTable) Release(id uint16) error {
 	return r.table.Release(newid)
 }
 
-func (r *vlanTable) Update(id uint16, labels labels.Set) error {
+func (r *Table32) Update(id uint32, labels labels.Set) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
@@ -106,11 +89,11 @@ func (r *vlanTable) Update(id uint16, labels labels.Set) error {
 	return r.table.Update(newid, treeEntry)
 }
 
-func (r *vlanTable) Size() int {
+func (r *Table32) Size() int {
 	return r.table.Size()
 }
 
-func (r *vlanTable) Has(id uint16) bool {
+func (r *Table32) Has(id uint32) bool {
 	// Validate IP address
 	if err := r.validateID(id); err != nil {
 		return false
@@ -119,7 +102,7 @@ func (r *vlanTable) Has(id uint16) bool {
 	return r.table.Has(newid)
 }
 
-func (r *vlanTable) IsFree(id uint16) bool {
+func (r *Table32) IsFree(id uint32) bool {
 	// Validate IP address
 	if err := r.validateID(id); err != nil {
 		return false
@@ -128,7 +111,7 @@ func (r *vlanTable) IsFree(id uint16) bool {
 	return r.table.IsFree(newid)
 }
 
-func (r *vlanTable) FindFree() (uint16, error) {
+func (r *Table32) FindFree() (uint32, error) {
 	id, err := r.table.FindFree()
 	if err != nil {
 		return 0, err
@@ -136,30 +119,34 @@ func (r *vlanTable) FindFree() (uint16, error) {
 	return calculateIDFromIndex(r.start, id), nil
 }
 
-func (r *vlanTable) GetAll() tree.Entries {
-	var entries tree.Entries
+func (r *Table32) GetAll() tree.Entries {
+	entries := make(tree.Entries, 0, r.table.Size())
 	for _, entry := range r.table.GetAll() {
-		entries = append(entries, entry.Data())
+		// need to remap the id for the outside world
+		entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, entry.ID())), 32), entry.Data().Labels())
+
+		entries = append(entries, entry)
 	}
 	return entries
 }
 
-func (r *vlanTable) GetByLabel(selector labels.Selector) tree.Entries {
-	var entries tree.Entries
+func (r *Table32) GetByLabel(selector labels.Selector) tree.Entries {
+	entries := make(tree.Entries, 0, r.table.Size())
 
 	iter := r.table.Iterate()
 
 	for iter.Next() {
 		entry := iter.Value().Data()
 		if selector.Matches(entry.Labels()) {
+			// need to remap the id for the outside world
+			entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, int64(entry.ID().ID()))), 32), entry.Labels())
 			entries = append(entries, entry)
 		}
 	}
-
 	return entries
 }
 
-func (r *vlanTable) validateID(id uint16) error {
+func (r *Table32) validateID(id uint32) error {
 
 	if id < r.start {
 		return fmt.Errorf("id %d, does not fit in the range from %d to %d", id, r.start, r.end)
@@ -170,11 +157,11 @@ func (r *vlanTable) validateID(id uint16) error {
 	return nil
 }
 
-func calculateIndex(id, start uint16) int64 {
+func calculateIndex(id, start uint32) int64 {
 	// Calculate the index in the bitmap
 	return int64(id - start)
 }
 
-func calculateIDFromIndex(start uint16, id int64) uint16 {
-	return start + uint16(id)
+func calculateIDFromIndex(start uint32, id int64) uint32 {
+	return start + uint32(id)
 }

@@ -1,4 +1,4 @@
-package vlantable
+package table32
 
 import (
 	"fmt"
@@ -11,19 +11,19 @@ import (
 
 func TestClaim(t *testing.T) {
 	cases := map[string]struct {
-		vlanRange         string
-		newSuccessEntries map[uint16]labels.Set
-		newFailedEntries  map[uint16]labels.Set
+		range32         string
+		newSuccessEntries map[uint32]labels.Set
+		newFailedEntries  map[uint32]labels.Set
 		expectedEntries   int
 	}{
 
 		"Normal": {
-			vlanRange: "100-199",
-			newSuccessEntries: map[uint16]labels.Set{
+			range32: "100-199",
+			newSuccessEntries: map[uint32]labels.Set{
 				100: nil,
 				199: nil,
 			},
-			newFailedEntries: map[uint16]labels.Set{
+			newFailedEntries: map[uint32]labels.Set{
 				500: nil,
 			},
 			expectedEntries: 2,
@@ -32,10 +32,10 @@ func TestClaim(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 
-			vlanRange, err := id32.ParseRange(tc.vlanRange)
+			range32, err := id32.ParseRange(tc.range32)
 			assert.NoError(t, err)
 
-			r := New(uint16(vlanRange.From().ID()), uint16(vlanRange.To().ID()))
+			r := New(uint32(range32.From().ID()), uint32(range32.To().ID()))
 
 			for id, labels := range tc.newSuccessEntries {
 				err := r.Claim(id, labels)

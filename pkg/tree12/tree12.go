@@ -1,4 +1,4 @@
-package vlantree
+package tree12
 
 import (
 	"fmt"
@@ -11,51 +11,33 @@ import (
 
 const addressbitsize = 32
 
-type VLANTree struct {
+type Tree12 struct {
 	m    *sync.RWMutex
 	tree *tree.Tree[tree.Entry]
 	size int
 }
 
-type VLANTableIterator struct {
+type Tree12Iterator struct {
 	iter *tree.TreeIterator[tree.Entry]
 }
 
-func New() *VLANTree {
-	return &VLANTree{
+func New() *Tree12 {
+	return &Tree12{
 		m:    new(sync.RWMutex),
 		tree: tree.NewTree[tree.Entry](id32.IsLeftBitSet),
 		size: 4096,
 	}
 }
 
-func (r *VLANTree) Clone() *VLANTree {
-	return &VLANTree{
+func (r *Tree12) Clone() *Tree12 {
+	return &Tree12{
 		m:    new(sync.RWMutex),
 		tree: r.tree.Clone(),
 		size: 4096,
 	}
 }
 
-func (r *VLANTree) Get(id uint16) (tree.Entry, error) {
-	// returns true if exact match is found.
-	r.m.RLock()
-	defer r.m.RUnlock()
-
-	iter := r.Iterate()
-	for iter.Next() {
-		if uint16(iter.Entry().ID().ID()) == id &&
-			iter.Entry().ID().Length() == addressbitsize {
-			return iter.Entry(), nil
-		}
-	}
-	return nil, fmt.Errorf("entry %d not found", id)
-}
-
-// GetID allows to get based on ID in which the prefix length
-// can be different than 32
-func (r *VLANTree) GetID(id tree.ID) (tree.Entry, error) {
-	// returns true if exact match is found.
+func (r *Tree12) Get(id tree.ID) (tree.Entry, error) {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
@@ -69,36 +51,10 @@ func (r *VLANTree) GetID(id tree.ID) (tree.Entry, error) {
 	return nil, fmt.Errorf("entry %d not found", id)
 }
 
-func (r *VLANTree) Update(id uint16, labels labels.Set) error {
+func (r *Tree12) Update(id tree.ID, labels labels.Set) error {
 	if err := r.validate(id); err != nil {
 		return err
 	}
-	treeId := id32.NewID(uint32(id), addressbitsize)
-	treeEntry := tree.NewEntry(treeId.Copy(), labels)
-
-	r.m.Lock()
-	defer r.m.Unlock()
-	return r.set(treeId, treeEntry)
-}
-
-func (r *VLANTree) Claim(id uint16, labels labels.Set) error {
-	if err := r.validate(id); err != nil {
-		return err
-	}
-	treeId := id32.NewID(uint32(id), addressbitsize)
-	treeEntry := tree.NewEntry(treeId.Copy(), labels)
-
-	r.m.Lock()
-	defer r.m.Unlock()
-	return r.set(treeId, treeEntry)
-}
-
-func (r *VLANTree) ClaimID(id tree.ID, labels labels.Set) error {
-	// TODO validate lenggth
-	if err := r.validate(uint16(id.ID())); err != nil {
-		return err
-	}
-	
 	treeEntry := tree.NewEntry(id.Copy(), labels)
 
 	r.m.Lock()
@@ -106,7 +62,18 @@ func (r *VLANTree) ClaimID(id tree.ID, labels labels.Set) error {
 	return r.set(id, treeEntry)
 }
 
-func (r *VLANTree) ClaimFree(labels labels.Set) (tree.Entry, error) {
+func (r *Tree12) Claim(id tree.ID, labels labels.Set) error {
+	if err := r.validate(id); err != nil {
+		return err
+	}
+	treeEntry := tree.NewEntry(id.Copy(), labels)
+
+	r.m.Lock()
+	defer r.m.Unlock()
+	return r.set(id, treeEntry)
+}
+
+func (r *Tree12) ClaimFree(labels labels.Set) (tree.Entry, error) {
 
 	id, err := r.findFree()
 	if err != nil {
@@ -123,8 +90,8 @@ func (r *VLANTree) ClaimFree(labels labels.Set) (tree.Entry, error) {
 	return treeEntry, nil
 }
 
-func (r *VLANTree) ClaimRange(s string, labels labels.Set) error {
-	vlanRange, err := id32.ParseRange(s)
+func (r *Tree12) ClaimRange(s string, labels labels.Set) error {
+	range12, err := id32.ParseRange(s)
 	if err != nil {
 		return err
 	}
@@ -132,7 +99,7 @@ func (r *VLANTree) ClaimRange(s string, labels labels.Set) error {
 
 	// get each entry and validate owner
 
-	for _, treeId := range vlanRange.IDs() {
+	for _, treeId := range range12.IDs() {
 		treeEntry := tree.NewEntry(treeId.Copy(), labels)
 		if err := r.set(treeId, treeEntry); err != nil {
 			return err
@@ -141,12 +108,12 @@ func (r *VLANTree) ClaimRange(s string, labels labels.Set) error {
 	return nil
 }
 
-func (r *VLANTree) set(id tree.ID, e tree.Entry) error {
+func (r *Tree12) set(id tree.ID, e tree.Entry) error {
 	r.tree.Set(id, e)
 	return nil
 }
 
-func (r *VLANTree) findFree() (uint16, error) {
+func (r *Tree12) findFree() (uint16, error) {
 	rootID := id32.NewID(0, 20)
 	var bldr id32.IDSetBuilder
 	bldr.AddId(rootID)
@@ -163,13 +130,13 @@ func (r *VLANTree) findFree() (uint16, error) {
 	if availableID == nil {
 		return 0, fmt.Errorf("no free id available")
 	}
-	if err := r.validate(uint16(availableID.ID())); err != nil {
+	if err := r.validate(availableID); err != nil {
 		return 0, err
 	}
 	return uint16(availableID.ID()), nil
 }
 
-func (r *VLANTree) Release(id uint16) error {
+func (r *Tree12) ReleaseID(id tree.ID) error {
 	if err := r.validate(id); err != nil {
 		return err
 	}
@@ -177,14 +144,12 @@ func (r *VLANTree) Release(id uint16) error {
 	if err != nil {
 		return nil
 	}
-	treeId := id32.NewID(uint32(id), addressbitsize)
-	treeEntry := tree.NewEntry(treeId.Copy(), e.Labels())
 	r.m.Lock()
 	defer r.m.Unlock()
-	return r.del(treeId, treeEntry)
+	return r.del(id, e)
 }
 
-func (r *VLANTree) ReleaseByLabel(selector labels.Selector) error {
+func (r *Tree12) ReleaseByLabel(selector labels.Selector) error {
 	entries := r.GetByLabel(selector)
 
 	r.m.Lock()
@@ -198,7 +163,7 @@ func (r *VLANTree) ReleaseByLabel(selector labels.Selector) error {
 	return nil
 }
 
-func (r *VLANTree) del(id tree.ID, e tree.Entry) error {
+func (r *Tree12) del(id tree.ID, e tree.Entry) error {
 	matchFunc := func(e1, e2 tree.Entry) bool {
 		return e1.Equal(e2)
 	}
@@ -206,7 +171,7 @@ func (r *VLANTree) del(id tree.ID, e tree.Entry) error {
 	return nil
 }
 
-func (r *VLANTree) Children(id tree.ID) tree.Entries {
+func (r *Tree12) Children(id tree.ID) tree.Entries {
 	entries := tree.Entries{}
 	r.m.RLock()
 	defer r.m.RUnlock()
@@ -223,26 +188,7 @@ func (r *VLANTree) Children(id tree.ID) tree.Entries {
 	return entries
 }
 
-/*
-func (r *VLANTree) Parents(id uint16) tree.Entries {
-	entries := tree.Entries{}
-	r.m.RLock()
-	defer r.m.RUnlock()
-
-	treeid := id32.NewID(uint32(id), addressbitsize)
-
-	iter := r.Iterate()
-	for iter.Next() {
-		entry := iter.Entry()
-		if entry.ID().Overlaps(treeid) && entry.ID().Length() < addressbitsize {
-			entries = append(entries, iter.Entry())
-		}
-	}
-	return entries
-}
-*/
-
-func (r *VLANTree) Parents(id tree.ID) tree.Entries {
+func (r *Tree12) Parents(id tree.ID) tree.Entries {
 	entries := tree.Entries{}
 	r.m.RLock()
 	defer r.m.RUnlock()
@@ -257,7 +203,7 @@ func (r *VLANTree) Parents(id tree.ID) tree.Entries {
 	return entries
 }
 
-func (r *VLANTree) GetByLabel(selector labels.Selector) tree.Entries {
+func (r *Tree12) GetByLabel(selector labels.Selector) tree.Entries {
 	entries := tree.Entries{}
 
 	iter := r.Iterate()
@@ -270,7 +216,7 @@ func (r *VLANTree) GetByLabel(selector labels.Selector) tree.Entries {
 	return entries
 }
 
-func (r *VLANTree) GetAll() tree.Entries {
+func (r *Tree12) GetAll() tree.Entries {
 	entries := tree.Entries{}
 
 	iter := r.Iterate()
@@ -281,7 +227,7 @@ func (r *VLANTree) GetAll() tree.Entries {
 	return entries
 }
 
-func (r *VLANTree) Size() int {
+func (r *Tree12) Size() int {
 	var size int
 
 	iter := r.Iterate()
@@ -292,31 +238,34 @@ func (r *VLANTree) Size() int {
 	return size
 }
 
-func (r *VLANTree) Iterate() *VLANTableIterator {
+func (r *Tree12) Iterate() *Tree12Iterator {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
-	return &VLANTableIterator{
+	return &Tree12Iterator{
 		iter: r.tree.Iterate(),
 	}
 }
 
-func (r *VLANTree) validate(id uint16) error {
-	if id > uint16(r.size-1) {
-		return fmt.Errorf("max id allowed is %d, got %d", r.size-1, id)
+func (r *Tree12) validate(id tree.ID) error {
+	if id.ID() > uint64(r.size-1) {
+		return fmt.Errorf("max id allowed is %d, got %d", r.size-1, id.ID())
+	}
+	if id.Length() < uint8(20) {
+		return fmt.Errorf("min allowed length is %d, got %d", 20, id.Length())
 	}
 	return nil
 }
 
-func (r *VLANTree) PrintNodes() {
+func (r *Tree12) PrintNodes() {
 	r.tree.PrintNodes(0)
 }
 
-func (i *VLANTableIterator) Next() bool {
+func (i *Tree12Iterator) Next() bool {
 	return i.iter.Next()
 }
 
-func (i *VLANTableIterator) Entry() tree.Entry {
+func (i *Tree12Iterator) Entry() tree.Entry {
 	l := i.iter.Vals()
 	// we store only 1 entry
 	return l[0]

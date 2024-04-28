@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/henderiw/idxtable/pkg/tree/id32"
-	"github.com/henderiw/idxtable/pkg/vlantree"
+	"github.com/henderiw/idxtable/pkg/tree12"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -147,7 +147,7 @@ func main() {
 
 	fmt.Println("lastID", id32.LastID(id32.NewID(0, 20)))
 
-	vt := vlantree.New()
+	vt := tree12.New()
 	/*
 		vt = vlantable2.New()
 		for i := 0; i <= 4095; i++ {
@@ -169,7 +169,7 @@ func main() {
 		}
 	*/
 
-	vt = vlantree.New()
+	vt = tree12.New()
 	vt.ClaimRange("1000-2000", map[string]string{"range": "test"})
 
 	handleId(vt, 1000)
@@ -177,18 +177,19 @@ func main() {
 
 }
 
-func handleId(vt *vlantree.VLANTree, id uint16) {
-	e, err := vt.Get(id)
+func handleId(vt *tree12.Tree12, id uint16) {
+	treeid := id32.NewID(uint32(id), 32)
+	e, err := vt.Get(treeid)
 	if err != nil {
 		fmt.Println(err)
-		if err := vt.Claim(id, nil); err != nil {
+		if err := vt.Claim(treeid, nil); err != nil {
 			fmt.Println(err)
 		}
-		_, err := vt.Get(id)
+		_, err := vt.Get(treeid)
 		if err != nil {
 			panic(err)
 		}
-		entries := vt.Parents(id32.NewID(uint32(id), 32))
+		entries := vt.Parents(treeid)
 		fmt.Println("parents", entries)
 		return
 	}
