@@ -1,4 +1,4 @@
-package vlantree
+package tree32
 
 import (
 	"fmt"
