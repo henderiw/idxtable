@@ -52,6 +52,23 @@ func (r *VLANTree) Get(id uint16) (tree.Entry, error) {
 	return nil, fmt.Errorf("entry %d not found", id)
 }
 
+// GetID allows to get based on ID in which the prefix length
+// can be different than 32
+func (r *VLANTree) GetID(id tree.ID) (tree.Entry, error) {
+	// returns true if exact match is found.
+	r.m.RLock()
+	defer r.m.RUnlock()
+
+	iter := r.Iterate()
+	for iter.Next() {
+		if uint16(iter.Entry().ID().ID()) == uint16(id.ID()) &&
+			iter.Entry().ID().Length() == id.Length() {
+			return iter.Entry(), nil
+		}
+	}
+	return nil, fmt.Errorf("entry %d not found", id)
+}
+
 func (r *VLANTree) Update(id uint16, labels labels.Set) error {
 	if err := r.validate(id); err != nil {
 		return err
