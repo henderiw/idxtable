@@ -188,7 +188,7 @@ func handleId(vt *vlantree.VLANTree, id uint16) {
 		if err != nil {
 			panic(err)
 		}
-		entries := vt.Parents(id)
+		entries := vt.Parents(id32.NewID(uint32(id), 32))
 		fmt.Println("parents", entries)
 		return
 	}

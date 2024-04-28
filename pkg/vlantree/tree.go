@@ -210,6 +210,7 @@ func (r *VLANTree) Children(id tree.ID) tree.Entries {
 	return entries
 }
 
+/*
 func (r *VLANTree) Parents(id uint16) tree.Entries {
 	entries := tree.Entries{}
 	r.m.RLock()
@@ -221,6 +222,22 @@ func (r *VLANTree) Parents(id uint16) tree.Entries {
 	for iter.Next() {
 		entry := iter.Entry()
 		if entry.ID().Overlaps(treeid) && entry.ID().Length() < addressbitsize {
+			entries = append(entries, iter.Entry())
+		}
+	}
+	return entries
+}
+*/
+
+func (r *VLANTree) Parents(id tree.ID) tree.Entries {
+	entries := tree.Entries{}
+	r.m.RLock()
+	defer r.m.RUnlock()
+
+	iter := r.Iterate()
+	for iter.Next() {
+		entry := iter.Entry()
+		if entry.ID().Overlaps(id) && entry.ID().Length() < addressbitsize {
 			entries = append(entries, iter.Entry())
 		}
 	}
