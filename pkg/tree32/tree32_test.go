@@ -10,25 +10,25 @@ import (
 
 func TestClaim(t *testing.T) {
 	cases := map[string]struct {
-		newSuccessEntries map[uint16]labels.Set
-		newFailedEntries  map[uint16]labels.Set
+		newSuccessEntries map[uint32]labels.Set
+		newFailedEntries  map[uint32]labels.Set
 		expectedEntries   int
 	}{
 
 		"Normal": {
-			newSuccessEntries: map[uint16]labels.Set{
+			newSuccessEntries: map[uint32]labels.Set{
 				10: map[string]string{},
 				11: map[string]string{},
 			},
-			newFailedEntries: map[uint16]labels.Set{
-				5000: map[string]string{},
+			newFailedEntries: map[uint32]labels.Set{
+				200000000: map[string]string{},
 			},
 			expectedEntries: 2,
 		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			vt := New()
+			vt := New(16777215, 8)
 
 			for id, d := range tc.newSuccessEntries {
 				treeid := id32.NewID(uint32(id), 32)

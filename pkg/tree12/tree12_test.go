@@ -28,7 +28,7 @@ func TestClaim(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			vt := New()
+			vt := New(4096, 20)
 
 			for id, d := range tc.newSuccessEntries {
 				treeid := id32.NewID(uint32(id), 32)

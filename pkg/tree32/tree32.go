@@ -12,28 +12,31 @@ import (
 const addressbitsize = 32
 
 type Tree32 struct {
-	m    *sync.RWMutex
-	tree *tree.Tree[tree.Entry]
-	size int
+	m      *sync.RWMutex
+	tree   *tree.Tree[tree.Entry]
+	size   int
+	length uint8
 }
 
 type Tree32Iterator struct {
 	iter *tree.TreeIterator[tree.Entry]
 }
 
-func New() *Tree32 {
+func New(size int, length uint8) *Tree32 {
 	return &Tree32{
-		m:    new(sync.RWMutex),
-		tree: tree.NewTree[tree.Entry](id32.IsLeftBitSet),
-		size: 4096,
+		m:      new(sync.RWMutex),
+		tree:   tree.NewTree[tree.Entry](id32.IsLeftBitSet),
+		size:   size,
+		length: length,
 	}
 }
 
 func (r *Tree32) Clone() *Tree32 {
 	return &Tree32{
-		m:    new(sync.RWMutex),
-		tree: r.tree.Clone(),
-		size: 4096,
+		m:      new(sync.RWMutex),
+		tree:   r.tree.Clone(),
+		size:   r.size,
+		length: r.length,
 	}
 }
 
@@ -114,7 +117,7 @@ func (r *Tree32) set(id tree.ID, e tree.Entry) error {
 }
 
 func (r *Tree32) findFree() (uint16, error) {
-	rootID := id32.NewID(0, 20)
+	rootID := id32.NewID(0, r.length)
 	var bldr id32.IDSetBuilder
 	bldr.AddId(rootID)
 
@@ -251,8 +254,8 @@ func (r *Tree32) validate(id tree.ID) error {
 	if id.ID() > uint64(r.size-1) {
 		return fmt.Errorf("max id allowed is %d, got %d", r.size-1, id.ID())
 	}
-	if id.Length() < uint8(20) {
-		return fmt.Errorf("min allowed length is %d, got %d", 20, id.Length())
+	if id.Length() < uint8(0) {
+		return fmt.Errorf("min allowed length is %d, got %d", r.length, id.Length())
 	}
 	return nil
 }

@@ -147,7 +147,7 @@ func main() {
 
 	fmt.Println("lastID", id32.LastID(id32.NewID(0, 20)))
 
-	vt := tree12.New()
+	vt := tree12.New(4096, 20)
 	/*
 		vt = vlantable2.New()
 		for i := 0; i <= 4095; i++ {
@@ -169,7 +169,7 @@ func main() {
 		}
 	*/
 
-	vt = tree12.New()
+	vt = tree12.New(4096, 20)
 	vt.ClaimRange("1000-2000", map[string]string{"range": "test"})
 
 	handleId(vt, 1000)
