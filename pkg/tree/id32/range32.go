@@ -17,8 +17,8 @@ type Range struct {
 
 func RangeFrom(from, to uint32) Range {
 	return Range{
-		from: NewID(from, 32),
-		to:   NewID(to, 32),
+		from: NewID(from, IDBitSize),
+		to:   NewID(to, IDBitSize),
 	}
 }
 
@@ -35,17 +35,17 @@ func ParseRange(s string) (Range, error) {
 		return r, fmt.Errorf("no hyphen in range %q", s)
 	}
 	from, to := s[:h], s[h+1:]
-	fromUint32, err := strconv.ParseUint(from, 10, 32)
+	fromUint32, err := strconv.ParseUint(from, 10, int(IDBitSize))
 	if err != nil {
 		return r, fmt.Errorf("invalid from id %q in range %q", from, s)
 	}
-	toUint32, err := strconv.ParseUint(to, 10, 32)
+	toUint32, err := strconv.ParseUint(to, 10, int(IDBitSize))
 	if err != nil {
 		return r, fmt.Errorf("invalid to id %q in range %q", to, s)
 	}
 	return Range{
-		from: NewID(uint32(fromUint32), 32),
-		to:   NewID(uint32(toUint32), 32),
+		from: NewID(uint32(fromUint32), IDBitSize),
+		to:   NewID(uint32(toUint32), IDBitSize),
 	}, nil
 }
 
@@ -137,7 +137,7 @@ func compareIDs(a, b myuint32) (common uint8, aZeroBSet bool) {
 
 	// See whether a and b, after their common shared bits, end
 	// in all zero bits or all one bits, respectively.
-	if common == 32 {
+	if common == IDBitSize {
 		return common, true
 	}
 
@@ -223,9 +223,9 @@ func LastID(id tree.ID) tree.ID {
 	}
 	var a4 [4]byte
 	bePutUint32(a4[:], uint32(id.ID()))
-	for b := uint8(id.Length()); b < 32; b++ {
+	for b := uint8(id.Length()); b < IDBitSize; b++ {
 		byteNum, bitInByte := b/8, 7-(b%8)
 		a4[byteNum] |= 1 << uint(bitInByte)
 	}
-	return NewID(beUint32(a4[:]), 32)
+	return NewID(beUint32(a4[:]), IDBitSize)
 }

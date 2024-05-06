@@ -154,7 +154,7 @@ func main() {
 		panic(err)
 	}
 	for id := 0; id <= 4095; id++ {
-		if err := vt.ClaimID(id16.NewID(uint16(id), tree16.IDBitSize), map[string]string{"id": strconv.Itoa(id)}); err != nil {
+		if err := vt.ClaimID(id16.NewID(uint16(id), id16.IDBitSize), map[string]string{"id": strconv.Itoa(id)}); err != nil {
 			panic(err)
 		}
 		fmt.Println("claimed entry", id)
@@ -209,14 +209,13 @@ func main() {
 	}
 	vt.ClaimRange("1000-2000", map[string]string{"range": "test"})
 
-
 	handleId(vt, 1000)
 	handleId(vt, 100)
 
 }
 
 func handleId(vt gtree.GTree, id uint16) {
-	treeid := id16.NewID(id, tree16.IDBitSize)
+	treeid := id16.NewID(id, id16.IDBitSize)
 	e, err := vt.Get(treeid)
 	if err != nil {
 		fmt.Println(err)

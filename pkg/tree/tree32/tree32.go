@@ -10,15 +10,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-const IDBitSize = 32
-
 func New(length uint8) (gtree.GTree, error) {
-	if length > IDBitSize {
-		return nil, fmt.Errorf("cannot create a tree which bitlength > %d, got: %d", IDBitSize, length)
+	if length > id32.IDBitSize {
+		return nil, fmt.Errorf("cannot create a tree which bitlength > %d, got: %d", id32.IDBitSize, length)
 	}
 	return &tree32{
 		m:      new(sync.RWMutex),
-		tree:   tree.NewTree[tree.Entry](id32.IsLeftBitSet, IDBitSize),
+		tree:   tree.NewTree[tree.Entry](id32.IsLeftBitSet, id32.IDBitSize),
 		size:   1<<length - 1,
 		length: length,
 	}, nil
@@ -83,7 +81,7 @@ func (r *tree32) ClaimFree(labels labels.Set) (tree.Entry, error) {
 		return nil, fmt.Errorf("no free ids available, err: %s", err.Error())
 	}
 
-	treeId := id32.NewID(uint32(id), IDBitSize)
+	treeId := id32.NewID(uint32(id), id32.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	r.m.Lock()
 	defer r.m.Unlock()
@@ -129,7 +127,7 @@ func (r *tree32) findFree() (uint32, error) {
 		return 0, err
 	}
 
-	availableID, _, _ := ipset.RemoveFreePrefix(IDBitSize)
+	availableID, _, _ := ipset.RemoveFreePrefix(id32.IDBitSize)
 	if availableID == nil {
 		return 0, fmt.Errorf("no free id available")
 	}
@@ -199,7 +197,7 @@ func (r *tree32) Parents(id tree.ID) tree.Entries {
 	iter := r.Iterate()
 	for iter.Next() {
 		entry := iter.Entry()
-		if entry.ID().Overlaps(id) && entry.ID().Length() < IDBitSize {
+		if entry.ID().Overlaps(id) && entry.ID().Length() < id32.IDBitSize {
 			entries = append(entries, iter.Entry())
 		}
 	}

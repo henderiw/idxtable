@@ -7,7 +7,9 @@ import (
 	"github.com/henderiw/idxtable/pkg/tree"
 )
 
-const _leftmostBit = uint16(1 << 15)
+const IDBitSize =  uint8(16)
+
+const _leftmostBit = uint16(1 << (IDBitSize - 1))
 
 func IsLeftBitSet(id uint64) bool {
 	return uint16(id) >= _leftmostBit
@@ -77,6 +79,7 @@ func (r myid16) Overlaps(b tree.ID) bool {
 	//fmt.Println("overlaps", ida, idb)
 	return ida == idb
 }
+
 // Compare returns an integer comparing two IDs.
 // The result will be 0 if id == id2, -1 if id < id2, and +1 if id > id2.
 // The definition of "less than" is the same as the [Addr.Less] method.
@@ -127,8 +130,8 @@ func (id myid16) Prev() tree.ID {
 // Prev returns the ID before id.
 // If there is none, it returns the ID zero value.
 func (id myid16) Mask(l uint8) (tree.ID, error) {
-	if l > 16 {
-		return nil, fmt.Errorf("length is too large, max 16, got: %d", l)
+	if l > IDBitSize {
+		return nil, fmt.Errorf("length is too large, max %d, got: %d", IDBitSize, l)
 	}
 	newid := uint16(myuint16(id.id).and(myuint16(mask6[uint16(l)])))
 	return myid16{id: newid, length: l}, nil

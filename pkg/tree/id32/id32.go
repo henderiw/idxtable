@@ -7,7 +7,9 @@ import (
 	"github.com/henderiw/idxtable/pkg/tree"
 )
 
-const _leftmostBit = uint32(1 << 31)
+const IDBitSize =  uint8(32)
+
+const _leftmostBit = uint32(1 << (IDBitSize - 1))
 
 func IsLeftBitSet(id uint64) bool {
 	return uint32(id) >= _leftmostBit
@@ -127,8 +129,8 @@ func (id myid32) Prev() tree.ID {
 // Prev returns the ID before id.
 // If there is none, it returns the ID zero value.
 func (id myid32) Mask(l uint8) (tree.ID, error) {
-	if l > 32 {
-		return nil, fmt.Errorf("length is too large, max 32, got: %d", l)
+	if l > IDBitSize {
+		return nil, fmt.Errorf("length is too large, max %d, got: %d", IDBitSize, l)
 	}
 	newid := uint32(myuint32(id.id).and(myuint32(mask6[uint32(l)])))
 	return myid32{id: newid, length: l}, nil
@@ -138,4 +140,3 @@ func (id myid32) Masked() tree.ID {
 	mid, _ := id.Mask(id.length)
 	return mid
 }
-

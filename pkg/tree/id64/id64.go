@@ -7,7 +7,9 @@ import (
 	"github.com/henderiw/idxtable/pkg/tree"
 )
 
-const _leftmostBit = uint64(1 << 63)
+const IDBitSize =  uint8(64)
+
+const _leftmostBit = uint64(1 << (IDBitSize - 1))
 
 func IsLeftBitSet(id uint64) bool {
 	return uint64(id) >= _leftmostBit

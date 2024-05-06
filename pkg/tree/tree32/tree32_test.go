@@ -32,25 +32,25 @@ func TestClaim(t *testing.T) {
 			assert.NoError(t, err)
 
 			for id, d := range tc.newSuccessEntries {
-				treeid := id32.NewID(id, IDBitSize)
+				treeid := id32.NewID(id, id32.IDBitSize)
 				err := vt.ClaimID(treeid, d)
 				assert.NoError(t, err)
 
 			}
 			for id, d := range tc.newFailedEntries {
-				treeid := id32.NewID(id, IDBitSize)
+				treeid := id32.NewID(id, id32.IDBitSize)
 				err := vt.ClaimID(treeid, d)
 				assert.Error(t, err)
 			}
 			// check table
 			for id := range tc.newSuccessEntries {
-				treeid := id32.NewID(id, IDBitSize)
+				treeid := id32.NewID(id, id32.IDBitSize)
 				if _, err := vt.Get(treeid); err != nil {
 					t.Errorf("%s expecting success claim entry: %d\n", name, id)
 				}
 			}
 			for id := range tc.newFailedEntries {
-				treeid := id32.NewID(id, IDBitSize)
+				treeid := id32.NewID(id, id32.IDBitSize)
 				if _, err := vt.Get(treeid); err == nil {
 					t.Errorf("%s expecting failed claim entry: %d\n", name, id)
 				}
