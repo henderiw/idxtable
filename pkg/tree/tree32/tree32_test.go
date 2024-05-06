@@ -21,14 +21,14 @@ func TestClaim(t *testing.T) {
 				11: map[string]string{},
 			},
 			newFailedEntries: map[uint32]labels.Set{
-				200000000: map[string]string{},
+				2000000000: map[string]string{},
 			},
 			expectedEntries: 2,
 		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			vt, err := New(12)
+			vt, err := New(id32.IDBitSize-2)
 			assert.NoError(t, err)
 
 			for id, d := range tc.newSuccessEntries {

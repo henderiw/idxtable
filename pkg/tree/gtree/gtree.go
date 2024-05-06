@@ -23,6 +23,7 @@ type GTree interface {
 	Size() int 
 	Iterate() *GTreeIterator
 	PrintNodes()
+	PrintValues()
 }
 
 type GTreeIterator struct {
