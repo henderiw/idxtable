@@ -1,62 +1,68 @@
-package tree12
+package table12
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/henderiw/idxtable/pkg/tree/id32"
+	"github.com/henderiw/idxtable/pkg/tree/id16"
 	"github.com/tj/assert"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 func TestClaim(t *testing.T) {
 	cases := map[string]struct {
+		trange            string
 		newSuccessEntries map[uint16]labels.Set
 		newFailedEntries  map[uint16]labels.Set
 		expectedEntries   int
 	}{
 
 		"Normal": {
+			trange: "100-199",
 			newSuccessEntries: map[uint16]labels.Set{
-				10: map[string]string{},
-				11: map[string]string{},
+				100: nil,
+				199: nil,
 			},
 			newFailedEntries: map[uint16]labels.Set{
-				5000: map[string]string{},
+				500: nil,
 			},
 			expectedEntries: 2,
 		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			vt := New(4096, 20)
 
-			for id, d := range tc.newSuccessEntries {
-				treeid := id32.NewID(uint32(id), 32)
-				err := vt.Claim(treeid, d)
+			trange, err := id16.ParseRange(tc.trange)
+			assert.NoError(t, err)
+
+			r := New(uint16(trange.From().ID()), uint16(trange.To().ID()))
+
+			for id, labels := range tc.newSuccessEntries {
+				err := r.Claim(uint64(id), labels)
 				assert.NoError(t, err)
 
 			}
-			for id, d := range tc.newFailedEntries {
-				treeid := id32.NewID(uint32(id), 32)
-				err := vt.Claim(treeid, d)
+			for id, labels := range tc.newFailedEntries {
+				err := r.Claim(uint64(id), labels)
 				assert.Error(t, err)
 			}
-			// check table
 			for id := range tc.newSuccessEntries {
-				treeid := id32.NewID(uint32(id), 32)
-				if _, err := vt.Get(treeid); err != nil {
+				if !r.Has(uint64(id)) {
 					t.Errorf("%s expecting success claim entry: %d\n", name, id)
 				}
 			}
 			for id := range tc.newFailedEntries {
-				treeid := id32.NewID(uint32(id), 32)
-				if _, err := vt.Get(treeid); err == nil {
+				if r.Has(uint64(id)) {
 					t.Errorf("%s no expecting failed claim entry: %d\n", name, id)
 				}
 			}
-			if len(vt.GetAll()) != tc.expectedEntries {
-				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(vt.GetAll()))
+			if r.Size() != tc.expectedEntries {
+				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(r.GetAll()))
 			}
+
+			id, err := r.FindFree()
+			assert.NoError(t, err)
+			fmt.Println(id)
 		})
 	}
 }

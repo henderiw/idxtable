@@ -95,15 +95,14 @@ var mask6 = [...]uint16{
 	0xffff, //16
 }
 
-/*
+
 func bePutUint16(b []byte, v uint16) {
-	_ = b[2] // early bounds check to guarantee safety of writes below
+	_ = b[1] // early bounds check to guarantee safety of writes below
 	b[0] = byte(v >> 8)
 	b[1] = byte(v)
 }
 
 func beUint16(b []byte) uint16 {
-	_ = b[2] // bounds check hint to compiler; see golang.org/issue/14808
+	_ = b[1] // bounds check hint to compiler; see golang.org/issue/14808
 	return uint16(b[1]) | uint16(b[0])<<8
 }
-*/

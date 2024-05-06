@@ -1,4 +1,4 @@
-package id16
+package id64
 
 import (
 	"fmt"
@@ -15,10 +15,10 @@ type Range struct {
 	to   tree.ID
 }
 
-func RangeFrom(from, to uint16) Range {
+func RangeFrom(from, to uint64) Range {
 	return Range{
-		from: NewID(from, 16),
-		to:   NewID(to, 16),
+		from: NewID(from, 64),
+		to:   NewID(to, 64),
 	}
 }
 
@@ -35,17 +35,17 @@ func ParseRange(s string) (Range, error) {
 		return r, fmt.Errorf("no hyphen in range %q", s)
 	}
 	from, to := s[:h], s[h+1:]
-	fromUint16, err := strconv.ParseUint(from, 10, 16)
+	fromUint64, err := strconv.ParseUint(from, 10, 64)
 	if err != nil {
 		return r, fmt.Errorf("invalid from id %q in range %q", from, s)
 	}
-	toUint16, err := strconv.ParseUint(to, 10, 16)
+	toUint64, err := strconv.ParseUint(to, 10, 64)
 	if err != nil {
 		return r, fmt.Errorf("invalid to id %q in range %q", to, s)
 	}
 	return Range{
-		from: NewID(uint16(fromUint16), 16),
-		to:   NewID(uint16(toUint16), 16),
+		from: NewID(fromUint64, 64),
+		to:   NewID(toUint64, 64),
 	}, nil
 }
 
@@ -74,14 +74,14 @@ func (r Range) IDs() []tree.ID {
 }
 
 func (r Range) AppendIDs(dst []tree.ID) []tree.ID {
-	return appendRangeIDs(dst, r.makeID, myuint16(r.from.ID()), myuint16(r.to.ID()))
+	return appendRangeIDs(dst, r.makeID, myuint64(r.from.ID()), myuint64(r.to.ID()))
 }
 
-func (r Range) makeID(id myuint16, bits uint8) tree.ID {
-	return &myid16{id: uint16(id), length: bits}
+func (r Range) makeID(id myuint64, bits uint8) tree.ID {
+	return &myid64{id: uint64(id), length: bits}
 }
 
-// entirelyBefore returns whether r lies entirely before other in ID
+// entirelyBefore returns whether r lies entirely before other in IP
 // space.
 func (r Range) entirelyBefore(other Range) bool {
 	return r.to.Less(other.from)
@@ -113,13 +113,13 @@ func (r Range) overlapsEndOf(other Range) bool {
 	return other.from.Less(r.from) && lessOrEq(other.to, r.to)
 }
 
-type idMaker func(a myuint16, bits uint8) tree.ID
+type idMaker func(a myuint64, bits uint8) tree.ID
 
-func u16CommonMask(a, b myuint16) uint8 {
-	return uint8(bits.LeadingZeros16(uint16(a ^ b)))
+func u64CommonMask(a, b myuint64) uint8 {
+	return uint8(bits.LeadingZeros64(uint64(a ^ b)))
 }
 
-func appendRangeIDs(dst []tree.ID, makePrefix idMaker, a, b myuint16) []tree.ID {
+func appendRangeIDs(dst []tree.ID, makePrefix idMaker, a, b myuint64) []tree.ID {
 	common, ok := compareIDs(a, b)
 	if ok {
 		return append(dst, makePrefix(a, common))
@@ -132,23 +132,23 @@ func appendRangeIDs(dst []tree.ID, makePrefix idMaker, a, b myuint16) []tree.ID 
 
 // aZeroBSet is whether, after the common bits, a is all zero bits and
 // b is all set (one) bits.
-func compareIDs(a, b myuint16) (common uint8, aZeroBSet bool) {
-	common = u16CommonMask(a, b)
+func compareIDs(a, b myuint64) (common uint8, aZeroBSet bool) {
+	common = u64CommonMask(a, b)
 
 	// See whether a and b, after their common shared bits, end
 	// in all zero bits or all one bits, respectively.
-	if common == 16 {
+	if common == 64 {
 		return common, true
 	}
 
 	m := mask6[common]
 
-	ma := myuint16(a)
-	mb := myuint16(b)
-	mm := myuint16(m)
+	ma := myuint64(a)
+	mb := myuint64(b)
+	mm := myuint64(m)
 
 	return common, (ma.xor(ma.and(mm)).isZero() &&
-		mb.or(mm) == myuint16(uint16(^uint16(0))))
+		mb.or(mm) == myuint64(uint64(^uint64(0))))
 }
 
 // mergeRanges returns the minimum and sorted set of ranges that
@@ -214,18 +214,18 @@ func RangeOfID(id tree.ID) Range {
 	if id == nil {
 		return Range{}
 	}
-	return RangeFrom(uint16(id.ID()), uint16(LastID(id).ID()))
+	return RangeFrom(id.ID(), LastID(id).ID())
 }
 
 func LastID(id tree.ID) tree.ID {
 	if id == nil {
 		return nil
 	}
-	var a2 [2]byte
-	bePutUint16(a2[:], uint16(id.ID()))
-	for b := uint8(id.Length()); b < 16; b++ {
+	var a8 [8]byte
+	bePutUint64(a8[:], id.ID())
+	for b := uint8(id.Length()); b < 64; b++ {
 		byteNum, bitInByte := b/8, 7-(b%8)
-		a2[byteNum] |= 1 << uint(bitInByte)
+		a8[byteNum] |= 1 << uint(bitInByte)
 	}
-	return NewID(beUint16(a2[:]), 16)
+	return NewID(beUint64(a8[:]), 64)
 }

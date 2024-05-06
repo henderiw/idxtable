@@ -1,4 +1,4 @@
-package table12
+package table32
 
 import (
 	"fmt"
@@ -11,20 +11,31 @@ import (
 
 func TestClaim(t *testing.T) {
 	cases := map[string]struct {
-		range12         string
-		newSuccessEntries map[uint16]labels.Set
-		newFailedEntries  map[uint16]labels.Set
+		trange         string
+		newSuccessEntries map[uint64]labels.Set
+		newFailedEntries  map[uint64]labels.Set
 		expectedEntries   int
 	}{
 
-		"Normal": {
-			range12: "100-199",
-			newSuccessEntries: map[uint16]labels.Set{
+		"Low": {
+			trange: "100-199",
+			newSuccessEntries: map[uint64]labels.Set{
 				100: nil,
 				199: nil,
 			},
-			newFailedEntries: map[uint16]labels.Set{
+			newFailedEntries: map[uint64]labels.Set{
 				500: nil,
+			},
+			expectedEntries: 2,
+		},
+		"High": {
+			trange: "4294967000-4294967295",
+			newSuccessEntries: map[uint64]labels.Set{
+				4294967000: nil,
+				4294967295: nil,
+			},
+			newFailedEntries: map[uint64]labels.Set{
+				4294967296: nil,
 			},
 			expectedEntries: 2,
 		},
@@ -32,10 +43,10 @@ func TestClaim(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 
-			range12, err := id32.ParseRange(tc.range12)
+			trange, err := id32.ParseRange(tc.trange)
 			assert.NoError(t, err)
 
-			r := New(uint16(range12.From().ID()), uint16(range12.To().ID()))
+			r := New(uint32(trange.From().ID()), uint32(trange.To().ID()))
 
 			for id, labels := range tc.newSuccessEntries {
 				err := r.Claim(id, labels)

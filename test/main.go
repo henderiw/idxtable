@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
-	"github.com/henderiw/idxtable/pkg/tree/id32"
-	"github.com/henderiw/idxtable/pkg/tree12"
+	"github.com/henderiw/idxtable/pkg/tree/gtree"
+	"github.com/henderiw/idxtable/pkg/tree/id16"
+	"github.com/henderiw/idxtable/pkg/tree/tree16"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -145,44 +147,80 @@ func main() {
 
 	*/
 
-	fmt.Println("lastID", id32.LastID(id32.NewID(0, 20)))
+	fmt.Println("lastID", id16.LastID(id16.NewID(0, 16-12)))
 
-	vt := tree12.New(4096, 20)
-	/*
-		vt = vlantable2.New()
-		for i := 0; i <= 4095; i++ {
-			if err := vt.Claim(uint16(i), map[string]string{"id": strconv.Itoa(i)}); err != nil {
-				panic(err)
-			}
-			fmt.Println("claimed entry", i)
+	vt, err := tree16.New(12)
+	if err != nil {
+		panic(err)
+	}
+	for id := 0; id <= 4095; id++ {
+		if err := vt.ClaimID(id16.NewID(uint16(id), tree16.IDBitSize), map[string]string{"id": strconv.Itoa(id)}); err != nil {
+			panic(err)
 		}
-	*/
+		fmt.Println("claimed entry", id)
+	}
 
-	/*
-		vt = vlantable2.New()
-		for i := 0; i <= 4095; i++ {
-			e, err := vt.ClaimFree(map[string]string{"id": strconv.Itoa(i)})
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("claimed entry", e.ID(), e.Labels())
+	vt, err = tree16.New(12)
+	if err != nil {
+		panic(err)
+	}
+	for id := 0; id <= 4095; id++ {
+		e, err := vt.ClaimFree(map[string]string{"id": strconv.Itoa(id)})
+		if err != nil {
+			panic(err)
 		}
-	*/
+		fmt.Println("claimed entry", e.ID(), e.Labels())
+	}
 
-	vt = tree12.New(4096, 20)
+	vt, err = tree16.New(12)
+	if err != nil {
+		panic(err)
+	}
 	vt.ClaimRange("1000-2000", map[string]string{"range": "test"})
+
+	for id := 0; id <= 4095; id++ {
+		e, err := vt.ClaimFree(map[string]string{"id": strconv.Itoa(id)})
+		if err != nil {
+			fmt.Println("claimed entry error", id, err.Error())
+			continue
+		}
+		fmt.Println("claimed entry", e.ID(), e.Labels())
+	}
+
+	fullselector := labels.NewSelector()
+	l := map[string]string{
+		"range": "test",
+	}
+	for k, v := range l {
+		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
+		if err != nil {
+			panic(err)
+		}
+		fullselector = fullselector.Add(*req)
+	}
+
+	if err := vt.ReleaseByLabel(fullselector); err != nil {
+		panic(err)
+	}
+
+	vt, err = tree16.New(12)
+	if err != nil {
+		panic(err)
+	}
+	vt.ClaimRange("1000-2000", map[string]string{"range": "test"})
+
 
 	handleId(vt, 1000)
 	handleId(vt, 100)
 
 }
 
-func handleId(vt *tree12.Tree12, id uint16) {
-	treeid := id32.NewID(uint32(id), 32)
+func handleId(vt gtree.GTree, id uint16) {
+	treeid := id16.NewID(id, tree16.IDBitSize)
 	e, err := vt.Get(treeid)
 	if err != nil {
 		fmt.Println(err)
-		if err := vt.Claim(treeid, nil); err != nil {
+		if err := vt.ClaimID(treeid, nil); err != nil {
 			fmt.Println(err)
 		}
 		_, err := vt.Get(treeid)

@@ -1,16 +1,18 @@
-package table32
+package table12
 
 import (
 	"fmt"
 
 	"github.com/henderiw/idxtable/pkg/idxtable"
+	"github.com/henderiw/idxtable/pkg/table"
 	"github.com/henderiw/idxtable/pkg/tree"
+	"github.com/henderiw/idxtable/pkg/tree/id16"
 	"github.com/henderiw/idxtable/pkg/tree/id32"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-func New(start, end uint32) *Table32 {
-	return &Table32{
+func New(start, end uint16) table.Table {
+	return &table16{
 		table: idxtable.NewTable[tree.Entry](
 			int64(end - start + 1),
 		),
@@ -19,19 +21,19 @@ func New(start, end uint32) *Table32 {
 	}
 }
 
-type Table32 struct {
+type table16 struct {
 	table idxtable.Table[tree.Entry]
-	start uint32
-	end   uint32
+	start uint16
+	end   uint16
 }
 
-func (r *Table32) Get(id uint32) (tree.Entry, error) {
+func (r *table16) Get(id uint64) (tree.Entry, error) {
 	var entry tree.Entry
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return entry, err
 	}
-	newid := calculateIndex(id, r.start)
+	newid := calculateIndex(uint16(id), r.start)
 	e, err := r.table.Get(newid)
 	if err != nil {
 		return entry, err
@@ -39,87 +41,87 @@ func (r *Table32) Get(id uint32) (tree.Entry, error) {
 	return e.Data(), nil
 }
 
-func (r *Table32) Claim(id uint32, labels labels.Set) error {
+func (r *table16) Claim(id uint64, labels labels.Set) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
 	}
-	newid := calculateIndex(id, r.start)
+	newid := calculateIndex(uint16(id), r.start)
 	if !r.table.IsFree(newid) {
 		return fmt.Errorf("claim failed id %d already claimed", calculateIDFromIndex(r.start, newid))
 	}
 
-	treeId := id32.NewID(uint32(newid), 32)
+	treeId := id16.NewID(uint16(newid), 16)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return r.table.Claim(newid, treeEntry)
 }
 
-func (r *Table32) ClaimFree(labels labels.Set) (tree.Entry, error) {
+func (r *table16) ClaimFree(labels labels.Set) (tree.Entry, error) {
 	// Validate input
 
 	id, err := r.FindFree()
 	if err != nil {
 		return nil, err
 	}
-	if err := r.Claim(id, labels); err != nil {
+	if err := r.Claim(uint64(id), labels); err != nil {
 		return nil, err
 	}
-	treeId := id32.NewID(uint32(id), 32)
+	treeId := id16.NewID(uint16(id), 16)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return treeEntry, nil
 }
 
-func (r *Table32) Release(id uint32) error {
+func (r *table16) Release(id uint64) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
 	}
-	newid := calculateIndex(id, r.start)
+	newid := calculateIndex(uint16(id), r.start)
 	return r.table.Release(newid)
 }
 
-func (r *Table32) Update(id uint32, labels labels.Set) error {
+func (r *table16) Update(id uint64, labels labels.Set) error {
 	// Validate input
 	if err := r.validateID(id); err != nil {
 		return err
 	}
-	newid := calculateIndex(id, r.start)
-	treeId := id32.NewID(uint32(newid), 32)
+	newid := calculateIndex(uint16(id), r.start)
+	treeId := id16.NewID(uint16(newid), 16)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return r.table.Update(newid, treeEntry)
 }
 
-func (r *Table32) Size() int {
+func (r *table16) Size() int {
 	return r.table.Size()
 }
 
-func (r *Table32) Has(id uint32) bool {
+func (r *table16) Has(id uint64) bool {
 	// Validate IP address
 	if err := r.validateID(id); err != nil {
 		return false
 	}
-	newid := calculateIndex(id, r.start)
+	newid := calculateIndex(uint16(id), r.start)
 	return r.table.Has(newid)
 }
 
-func (r *Table32) IsFree(id uint32) bool {
+func (r *table16) IsFree(id uint64) bool {
 	// Validate IP address
 	if err := r.validateID(id); err != nil {
 		return false
 	}
-	newid := calculateIndex(id, r.start)
+	newid := calculateIndex(uint16(id), r.start)
 	return r.table.IsFree(newid)
 }
 
-func (r *Table32) FindFree() (uint32, error) {
+func (r *table16) FindFree() (uint64, error) {
 	id, err := r.table.FindFree()
 	if err != nil {
 		return 0, err
 	}
-	return calculateIDFromIndex(r.start, id), nil
+	return uint64(calculateIDFromIndex(r.start, id)), nil
 }
 
-func (r *Table32) GetAll() tree.Entries {
+func (r *table16) GetAll() tree.Entries {
 	entries := make(tree.Entries, 0, r.table.Size())
 	for _, entry := range r.table.GetAll() {
 		// need to remap the id for the outside world
@@ -130,7 +132,7 @@ func (r *Table32) GetAll() tree.Entries {
 	return entries
 }
 
-func (r *Table32) GetByLabel(selector labels.Selector) tree.Entries {
+func (r *table16) GetByLabel(selector labels.Selector) tree.Entries {
 	entries := make(tree.Entries, 0, r.table.Size())
 
 	iter := r.table.Iterate()
@@ -146,22 +148,24 @@ func (r *Table32) GetByLabel(selector labels.Selector) tree.Entries {
 	return entries
 }
 
-func (r *Table32) validateID(id uint32) error {
-
-	if id < r.start {
+func (r *table16) validateID(id uint64) error {
+	if id > 65535 {
+		return fmt.Errorf("id %d, cannot be bigger than 65535", id)
+	}
+	if uint16(id) < r.start {
 		return fmt.Errorf("id %d, does not fit in the range from %d to %d", id, r.start, r.end)
 	}
-	if id > r.end {
+	if uint16(id) > r.end {
 		return fmt.Errorf("id %d, does not fit in the range from %d to %d", id, r.start, r.end)
 	}
 	return nil
 }
 
-func calculateIndex(id, start uint32) int64 {
+func calculateIndex(id, start uint16) int64 {
 	// Calculate the index in the bitmap
 	return int64(id - start)
 }
 
-func calculateIDFromIndex(start uint32, id int64) uint32 {
-	return start + uint32(id)
+func calculateIDFromIndex(start uint16, id int64) uint16 {
+	return start + uint16(id)
 }

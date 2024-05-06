@@ -1,0 +1,231 @@
+package id64
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/henderiw/idxtable/pkg/tree"
+)
+
+type IDSetBuilder struct {
+	in   []Range
+	out  []Range
+	errs error
+}
+
+func (s *IDSetBuilder) AddId(id tree.ID) {
+	if r := RangeOfID(id); r.IsValid() {
+		s.AddRange(r)
+	} else {
+		s.errs = errors.Join(s.errs, fmt.Errorf("addId(%v-%v)", id.ID(), id.Length()))
+	}
+}
+
+// RemoveId removes all Ids in p from s.
+func (s *IDSetBuilder) RemoveId(id tree.ID) {
+	if r := RangeOfID(id); r.IsValid() {
+		s.RemoveRange(r)
+	} else {
+		s.errs = errors.Join(s.errs, fmt.Errorf("removeId(%v-%v)", id.ID(), id.Length()))
+	}
+}
+
+func (s *IDSetBuilder) AddRange(r Range) {
+	if !r.IsValid() {
+		s.errs = errors.Join(s.errs, fmt.Errorf("addRange(%v-%v)", r.From(), r.To()))
+		return
+	}
+	if len(s.out) > 0 {
+		s.normalize()
+	}
+	s.in = append(s.in, r)
+}
+
+// RemoveRange removes all IPs in r from s.
+func (s *IDSetBuilder) RemoveRange(r Range) {
+	if r.IsValid() {
+		s.out = append(s.out, r)
+	} else {
+		s.errs = errors.Join(s.errs, fmt.Errorf("removeRange(%v-%v)", r.From(), r.To()))
+		return
+	}
+}
+
+// AddSet adds all IPs in b to s.
+func (s *IDSetBuilder) AddSet(b *IDSet) {
+	if b == nil {
+		return
+	}
+	for _, r := range b.rr {
+		s.AddRange(r)
+	}
+}
+
+// normalize normalizes s: s.in becomes the minimal sorted list of
+// ranges required to describe s, and s.out becomes empty.
+
+func (s *IDSetBuilder) normalize() {
+	in, ok := mergeRanges(s.in)
+	if !ok {
+		return
+	}
+	out, ok := mergeRanges(s.out)
+	if !ok {
+		return
+	}
+	// in and out are sorted in ascending range order, and have no
+	// overlaps within each other. We can run a merge of the two lists
+	// in one pass.
+
+	min := make([]Range, 0, len(in))
+	for len(in) > 0 && len(out) > 0 {
+		rin, rout := in[0], out[0]
+
+		switch {
+		case !rout.IsValid() || !rin.IsValid():
+			// mergeIPRanges should have prevented invalid ranges from
+			// sneaking in.
+			panic("invalid IPRanges during Ranges merge")
+		case rout.entirelyBefore(rin):
+			// "out" is entirely before "in".
+			//
+			//    out         in
+			// f-------t   f-------t
+			out = out[1:]
+		case rin.entirelyBefore(rout):
+			// "in" is entirely before "out".
+			//
+			//    in         out
+			// f------t   f-------t
+			min = append(min, rin)
+			in = in[1:]
+		case rin.coveredBy(rout):
+			// "out" entirely covers "in".
+			//
+			//       out
+			// f-------------t
+			//    f------t
+			//       in
+			in = in[1:]
+		case rout.inMiddleOf(rin):
+			// "in" entirely covers "out".
+			//
+			//       in
+			// f-------------t
+			//    f------t
+			//       out
+			min = append(min, Range{from: rin.from, to: rout.from.Prev()})
+			// Adjust in[0], not ir, because we want to consider the
+			// mutated range on the next iteration.
+			in[0].from = rout.to.Next()
+			out = out[1:]
+		case rout.overlapsStartOf(rin):
+			// "out" overlaps start of "in".
+			//
+			//   out
+			// f------t
+			//    f------t
+			//       in
+			in[0].from = rout.to.Next()
+			// Can't move ir onto min yet, another later out might
+			// trim it further. Just discard or and continue.
+			out = out[1:]
+		case rout.overlapsEndOf(rin):
+			// "out" overlaps end of "in".
+			//
+			//           out
+			//        f------t
+			//    f------t
+			//       in
+			min = append(min, Range{from: rin.from, to: rout.from.Prev()})
+			in = in[1:]
+		default:
+			// The above should account for all combinations of in and
+			// out overlapping, but insert a panic to be sure.
+			panic("unexpected additional overlap scenario")
+		}
+	}
+	if len(in) > 0 {
+		// Ran out of removals before the end of in.
+		min = append(min, in...)
+	}
+
+	s.in = min
+	s.out = nil
+
+}
+
+func (s *IDSetBuilder) IPSet() (*IDSet, error) {
+	s.normalize()
+	idset := &IDSet{
+		rr: append([]Range{}, s.in...),
+	}
+	if s.errs == nil {
+		return idset, nil
+	} else {
+		errs := s.errs
+		s.errs = nil
+		return idset, errs
+	}
+}
+
+type IDSet struct {
+	// rr is the set of IPs that belong to this IPSet. The IPRanges
+	// are normalized according to IPSetBuilder.normalize, meaning
+	// they are a sorted, minimal representation (no overlapping
+	// ranges, no contiguous ranges). The implementation of various
+	// methods rely on this property.
+	rr []Range
+}
+
+// Ranges returns the minimum and sorted set of IP
+// ranges that covers s.
+func (s *IDSet) Ranges() []Range {
+	return append([]Range{}, s.rr...)
+}
+
+// Prefixes returns the minimum and sorted set of IP prefixes
+// that covers s.
+func (s *IDSet) IDs() []tree.ID {
+	out := make([]tree.ID, 0, len(s.rr))
+	for _, r := range s.rr {
+		out = append(out, r.IDs()...)
+	}
+	return out
+}
+
+
+// RemoveFreePrefix splits s into a Prefix of length bitLen and a new
+// IPSet with that prefix removed.
+//
+// If no contiguous prefix of length bitLen exists in s,
+// RemoveFreePrefix returns ok=false.
+func (s *IDSet) RemoveFreePrefix(bitLen uint8) (tree.ID, *IDSet, bool) {
+	var bestFit tree.ID
+	for _, r := range s.rr {
+		for _, id := range r.IDs() {
+			if uint8(id.Length()) > bitLen {
+				continue
+			}
+			if !(bestFit != nil) || id.Length() > bestFit.Length() {
+				bestFit = id
+				if uint8(bestFit.Length()) == bitLen {
+					// exact match, done.
+					break
+				}
+			}
+		}
+	}
+
+	if !(bestFit != nil) {
+		return nil, s, false
+	}
+
+	id := NewID(uint64(bestFit.ID()), bitLen)
+
+	var b IDSetBuilder
+	b.AddSet(s)
+	b.RemoveId(id)
+	newSet, _ := b.IPSet()
+	return id, newSet, true
+}

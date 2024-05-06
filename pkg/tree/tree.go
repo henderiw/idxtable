@@ -37,17 +37,19 @@ const (
 )
 
 type Tree[T any] struct {
-	isLeftBitSetFn   IsLeftBitSetFn
-	nodes            []treeNode[T] // root is always at [1] - [0] is unused
-	availableIndexes []uint        // a place to store node indexes that we deleted, and are available
+	isLeftBitSetFn   IsLeftBitSetFn // input
+	length           uint8          // input
+	nodes            []treeNode[T]  // root is always at [1] - [0] is unused
+	availableIndexes []uint         // a place to store node indexes that we deleted, and are available
 	vals             map[uint64]T
 }
 
 type IsLeftBitSetFn func(id uint64) bool
 
-func NewTree[T any](isLeftBitSetFn IsLeftBitSetFn) *Tree[T] {
+func NewTree[T any](isLeftBitSetFn IsLeftBitSetFn, length uint8) *Tree[T] {
 	return &Tree[T]{
 		isLeftBitSetFn:   isLeftBitSetFn,
+		length:           length,
 		nodes:            make([]treeNode[T], 2), // index 0 is skipped, 1 is root
 		availableIndexes: make([]uint, 0),
 		vals:             make(map[uint64]T),
@@ -76,7 +78,7 @@ func (r *Tree[T]) Clone() *Tree[T] {
 // - if udpateFunc is non-nil, it is used to update the tag if it already exists (if nil, the provided tag is used)
 // - returns whether the tag count was increased
 func (r *Tree[T]) addVal(val T, nodeIndex uint, matchFunc MatchesFunc[T], updateFunc UpdatesFunc[T]) bool {
-	key := (uint64(nodeIndex) << 32)
+	key := (uint64(nodeIndex) << uint64(r.length))
 	valCount := r.nodes[nodeIndex].ValCount
 	if matchFunc != nil {
 		// need to check if this value already exists
@@ -96,8 +98,8 @@ func (r *Tree[T]) addVal(val T, nodeIndex uint, matchFunc MatchesFunc[T], update
 
 func (r *Tree[T]) moveTags(fromIndex uint, toIndex uint) {
 	tagCount := r.nodes[fromIndex].ValCount
-	fromKey := uint64(fromIndex) << 32
-	toKey := uint64(toIndex) << 32
+	fromKey := uint64(fromIndex) << uint64(r.length)
+	toKey := uint64(toIndex) << uint64(r.length)
 	for i := 0; i < tagCount; i++ {
 		r.vals[toKey+uint64(i)] = r.vals[fromKey+uint64(i)]
 		delete(r.vals, fromKey+uint64(i))
@@ -116,7 +118,7 @@ func (r *Tree[T]) valsForNode(ret []T, nodeIndex uint, filterFunc FilterFunc[T])
 
 	// TODO: clean up the typing in here, between uint, uint64
 	valCount := r.nodes[nodeIndex].ValCount
-	key := uint64(nodeIndex) << 32
+	key := uint64(nodeIndex) << uint64(r.length)
 	for i := 0; i < valCount; i++ {
 		tag := r.vals[key+uint64(i)]
 		if filterFunc == nil || filterFunc(tag) {
@@ -139,7 +141,7 @@ func (r *Tree[T]) deleteVal(buf []T, nodeIndex uint, matchTag T, matchFunc Match
 	// delete tags
 	// TODO: this could be done smarter - delete in place?
 	for i := 0; i < r.nodes[nodeIndex].ValCount; i++ {
-		delete(r.vals, (uint64(nodeIndex)<<32)+uint64(i))
+		delete(r.vals, (uint64(nodeIndex)<<uint64(r.length))+uint64(i))
 	}
 	r.nodes[nodeIndex].ValCount = 0
 
@@ -432,7 +434,7 @@ func (r *Tree[T]) deleteNode(targetNodeIndex uint, targetNode *treeNode[T], pare
 
 		// need to update the child node prefix to include target node's
 		tmpNode := &r.nodes[targetNode.Left]
-		tmpNode.MergeFromNodes(targetNode, tmpNode)
+		tmpNode.MergeFromNodes(targetNode, tmpNode, r.length)
 	} else if targetNode.Right != 0 {
 		// target node has only right child
 		result = deletedNodeReplacedByChild
@@ -444,7 +446,7 @@ func (r *Tree[T]) deleteNode(targetNodeIndex uint, targetNode *treeNode[T], pare
 
 		// need to update the child node prefix to include target node's
 		tmpNode := &r.nodes[targetNode.Right]
-		tmpNode.MergeFromNodes(targetNode, tmpNode)
+		tmpNode.MergeFromNodes(targetNode, tmpNode, r.length)
 	} else {
 		// target node has no children - straight-up remove this node
 		result = deletedNodeJustRemoved
@@ -455,7 +457,7 @@ func (r *Tree[T]) deleteNode(targetNodeIndex uint, targetNode *treeNode[T], pare
 				result = deletedNodeParentReplacedBySibling
 				siblingIndexToDelete := parent.Right
 				tmpNode := &r.nodes[siblingIndexToDelete]
-				parent.MergeFromNodes(parent, tmpNode)
+				parent.MergeFromNodes(parent, tmpNode, r.length)
 
 				// move tags
 				r.moveTags(siblingIndexToDelete, parentIndex)
@@ -473,7 +475,7 @@ func (r *Tree[T]) deleteNode(targetNodeIndex uint, targetNode *treeNode[T], pare
 				result = deletedNodeParentReplacedBySibling
 				siblingIndexToDelete := parent.Left
 				tmpNode := &r.nodes[siblingIndexToDelete]
-				parent.MergeFromNodes(parent, tmpNode)
+				parent.MergeFromNodes(parent, tmpNode, r.length)
 
 				// move tags
 				r.moveTags(siblingIndexToDelete, parentIndex)
@@ -495,6 +497,7 @@ func (r *Tree[T]) deleteNode(targetNodeIndex uint, targetNode *treeNode[T], pare
 
 // TreeIteratorV4[T] is a stateful iterator over a tree.
 type TreeIterator[T any] struct {
+	length      uint8 // input to determine which mask to apply
 	t           *Tree[T]
 	nodeIndex   uint
 	nodeHistory []uint
@@ -505,6 +508,7 @@ type TreeIterator[T any] struct {
 // important for the tree to not be modified while using the iterator.
 func (r *Tree[T]) Iterate() *TreeIterator[T] {
 	return &TreeIterator[T]{
+		length:      r.length, // input to determine which mask to apply
 		t:           r,
 		nodeIndex:   1,
 		nodeHistory: []uint{},

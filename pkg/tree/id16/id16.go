@@ -20,7 +20,7 @@ type myid16 struct {
 
 func NewID(id uint16, length uint8) tree.ID {
 	return myid16{
-		id:     uint16(id),
+		id:     id,
 		length: length,
 	}
 }
@@ -74,24 +74,24 @@ func (r myid16) Overlaps(b tree.ID) bool {
 	ida := r.id & mask6[minbits]
 	idb := uint16(b.ID()) & mask6[minbits]
 
-	fmt.Println("overlaps", ida, idb)
+	//fmt.Println("overlaps", ida, idb)
 	return ida == idb
 }
-// Compare returns an integer comparing two IPs.
-// The result will be 0 if ip == ip2, -1 if ip < ip2, and +1 if ip > ip2.
+// Compare returns an integer comparing two IDs.
+// The result will be 0 if id == id2, -1 if id < id2, and +1 if id > id2.
 // The definition of "less than" is the same as the [Addr.Less] method.
-func (r myid16) Compare(r2 tree.ID) int {
-	f1, f2 := r.Length(), r2.Length()
+func (r myid16) Compare(id2 tree.ID) int {
+	f1, f2 := r.Length(), id2.Length()
 	if f1 < f2 {
 		return -1
 	}
 	if f1 > f2 {
 		return 1
 	}
-	if r.ID() < r2.ID() {
+	if r.ID() < id2.ID() {
 		return -1
 	}
-	if r.ID() > r2.ID() {
+	if r.ID() > id2.ID() {
 		return 1
 	}
 	return 0
@@ -128,7 +128,7 @@ func (id myid16) Prev() tree.ID {
 // If there is none, it returns the ID zero value.
 func (id myid16) Mask(l uint8) (tree.ID, error) {
 	if l > 16 {
-		return nil, fmt.Errorf("length is too large, max 32, got: %d", l)
+		return nil, fmt.Errorf("length is too large, max 16, got: %d", l)
 	}
 	newid := uint16(myuint16(id.id).and(myuint16(mask6[uint16(l)])))
 	return myid16{id: newid, length: l}, nil

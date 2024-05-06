@@ -31,7 +31,18 @@ func (n *treeNode[T]) ShiftLength(shiftCount uint8) {
 }
 
 // MergeFromNodes updates the prefix and prefix length from the two input nodes
-func (n *treeNode[T]) MergeFromNodes(left *treeNode[T], right *treeNode[T]) {
-	id, l := MergeID32(uint32(left.Id), left.Length, uint32(right.Id), right.Length)
-	n.Id, n.Length = uint64(id), l
+func (n *treeNode[T]) MergeFromNodes(left *treeNode[T], right *treeNode[T], idLength uint8) {
+	switch idLength {
+	case 16:
+		id, l := MergeID16(uint16(left.Id), left.Length, uint16(right.Id), right.Length)
+		n.Id, n.Length = uint64(id), l
+	case 32:
+		id, l := MergeID32(uint32(left.Id), left.Length, uint32(right.Id), right.Length)
+		n.Id, n.Length = uint64(id), l
+	case 64:
+		id, l := MergeID64(left.Id, left.Length, right.Id, right.Length)
+		n.Id, n.Length = uint64(id), l
+	default:
+		panic("unsupported id length")
+	}
 }
