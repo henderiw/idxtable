@@ -123,6 +123,7 @@ func (r *table32) FindFree() (uint64, error) {
 func (r *table32) GetAll() tree.Entries {
 	entries := make(tree.Entries, 0, r.table.Size())
 	for _, entry := range r.table.GetAll() {
+		fmt.Println("getall", entry)
 		fmt.Println("getall", entry.ID(), entry.Data())
 		fmt.Println("getall", calculateIDFromIndex(r.start, entry.ID()))
 		// need to remap the id for the outside world
