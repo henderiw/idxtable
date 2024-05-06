@@ -320,7 +320,7 @@ func (r *table[T1]) GetAll() Entries[T1] {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
-	entries := make([]Entry[T1], len(r.table))
+	entries := make([]Entry[T1], 0, len(r.table))
 
 	iter := r.Iterate()
 	for iter.Next() {
