@@ -119,7 +119,7 @@ var mask6 = [...]uint64{
 }
 
 func bePutUint64(b []byte, v uint64) {
-	_ = b[8] // early bounds check to guarantee safety of writes below
+	_ = b[7] // early bounds check to guarantee safety of writes below
 	b[0] = byte(v >> 56)
 	b[1] = byte(v >> 48)
 	b[2] = byte(v >> 40)

@@ -16,7 +16,7 @@ func New(length uint8) (gtree.GTree, error) {
 	if length > id16.IDBitSize {
 		return nil, fmt.Errorf("cannot create a tree which bitlength > %d, got: %d", id16.IDBitSize, length)
 	}
-	fmt.Println("size16", uint64(1<<length - 1))
+	//fmt.Println("size16", uint64(1<<length - 1))
 	return &tree16{
 		m:      new(sync.RWMutex),
 		tree:   tree.NewTree[tree.Entry](id16.IsLeftBitSet, id16.IDBitSize),
@@ -78,16 +78,14 @@ func (r *tree16) ClaimID(id tree.ID, labels labels.Set) error {
 }
 
 func (r *tree16) ClaimFree(labels labels.Set) (tree.Entry, error) {
-
 	id, err := r.findFree()
 	if err != nil {
 		return nil, fmt.Errorf("no free ids available, err: %s", err.Error())
 	}
-
-	treeId := id16.NewID(uint16(id), id16.IDBitSize)
-	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	r.m.Lock()
 	defer r.m.Unlock()
+	treeId := id16.NewID(uint16(id), id16.IDBitSize)
+	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	if err := r.set(treeId, treeEntry); err != nil {
 		return nil, err
 	}
@@ -123,6 +121,7 @@ func (r *tree16) findFree() (uint16, error) {
 	var bldr id16.IDSetBuilder
 	bldr.AddId(rootID)
 
+
 	for _, e := range r.Children(rootID) {
 		bldr.RemoveId(e.ID())
 	}
@@ -135,6 +134,7 @@ func (r *tree16) findFree() (uint16, error) {
 	if availableID == nil {
 		return 0, fmt.Errorf("no free id available")
 	}
+	//fmt.Println("findFree, availableID", availableID.ID())
 	if err := r.validate(availableID); err != nil {
 		return 0, err
 	}

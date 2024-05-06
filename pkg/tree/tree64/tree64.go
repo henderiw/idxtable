@@ -14,7 +14,7 @@ func New(length uint8) (gtree.GTree, error) {
 	if length > id64.IDBitSize {
 		return nil, fmt.Errorf("cannot create a tree which bitlength > %d, got: %d", id64.IDBitSize, length)
 	}
-	fmt.Println("size64", 1<<length - 1)
+	fmt.Println("size64", 1<<length-1)
 	return &tree64{
 		m:      new(sync.RWMutex),
 		tree:   tree.NewTree[tree.Entry](id64.IsLeftBitSet, id64.IDBitSize),
@@ -97,7 +97,7 @@ func (r *tree64) ClaimFree(labels labels.Set) (tree.Entry, error) {
 }
 
 func (r *tree64) ClaimRange(s string, labels labels.Set) error {
-	vlanRange, err := id64.ParseRange(s)
+	treeRange, err := id64.ParseRange(s)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (r *tree64) ClaimRange(s string, labels labels.Set) error {
 
 	// get each entry and validate owner
 
-	for _, treeId := range vlanRange.IDs() {
+	for _, treeId := range treeRange.IDs() {
 		treeEntry := tree.NewEntry(treeId.Copy(), labels)
 		if err := r.set(treeId, treeEntry); err != nil {
 			return err
@@ -120,7 +120,7 @@ func (r *tree64) set(id tree.ID, e tree.Entry) error {
 }
 
 func (r *tree64) findFree() (uint64, error) {
-	rootID := id64.NewID(0, r.length)
+	rootID := id64.NewID(0, (id64.IDBitSize - r.length))
 	var bldr id64.IDSetBuilder
 	bldr.AddId(rootID)
 

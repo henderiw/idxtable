@@ -10,26 +10,36 @@ import (
 	"github.com/henderiw/idxtable/pkg/tree"
 )
 
-type Range struct {
+type r64 struct {
 	from tree.ID
 	to   tree.ID
 }
 
-func RangeFrom(from, to uint64) Range {
-	return Range{
+func RangeFrom(from, to uint64) tree.Range {
+	return r64{
 		from: NewID(from, IDBitSize),
 		to:   NewID(to, IDBitSize),
 	}
 }
 
 // From returns the lower bound of r.
-func (r Range) From() tree.ID { return r.from }
+func (r r64) From() tree.ID { return r.from }
 
 // To returns the upper bound of r.
-func (r Range) To() tree.ID { return r.to }
+func (r r64) To() tree.ID { return r.to }
 
-func ParseRange(s string) (Range, error) {
-	var r Range
+func (r r64) SetTo(id tree.ID) tree.Range{
+	r.to = id
+	return r
+}
+
+func (r r64) SetFrom(id tree.ID) tree.Range {
+	r.from = id
+	return r
+}
+
+func ParseRange(s string) (tree.Range, error) {
+	var r tree.Range
 	h := strings.IndexByte(s, '-')
 	if h == -1 {
 		return r, fmt.Errorf("no hyphen in range %q", s)
@@ -43,74 +53,74 @@ func ParseRange(s string) (Range, error) {
 	if err != nil {
 		return r, fmt.Errorf("invalid to id %q in range %q", to, s)
 	}
-	return Range{
+	return r64{
 		from: NewID(fromUint64, IDBitSize),
 		to:   NewID(toUint64, IDBitSize),
 	}, nil
 }
 
-func (r Range) String() string {
+func (r r64) String() string {
 	return fmt.Sprintf("%d-%d", r.from.ID(), r.to.ID())
 }
 
-func (r Range) IsValid() bool {
+func (r r64) IsValid() bool {
 	return r.from.Length() == r.to.Length() &&
 		!(r.to.ID() < r.From().ID())
 }
 
-func (r Range) IsZero() bool {
-	return r == Range{}
+func (r r64) IsZero() bool {
+	return r == r64{}
 }
 
-func (r Range) less(other Range) bool {
-	if cmp := r.from.Compare(other.from); cmp != 0 {
+func (r r64) Less(other tree.Range) bool {
+	if cmp := r.from.Compare(other.From()); cmp != 0 {
 		return cmp < 0
 	}
-	return other.to.Less(r.to)
+	return other.To().Less(r.to)
 }
 
-func (r Range) IDs() []tree.ID {
+func (r r64) IDs() []tree.ID {
 	return r.AppendIDs(nil)
 }
 
-func (r Range) AppendIDs(dst []tree.ID) []tree.ID {
+func (r r64) AppendIDs(dst []tree.ID) []tree.ID {
 	return appendRangeIDs(dst, r.makeID, myuint64(r.from.ID()), myuint64(r.to.ID()))
 }
 
-func (r Range) makeID(id myuint64, bits uint8) tree.ID {
+func (r r64) makeID(id myuint64, bits uint8) tree.ID {
 	return &myid64{id: uint64(id), length: bits}
 }
 
 // entirelyBefore returns whether r lies entirely before other in IP
 // space.
-func (r Range) entirelyBefore(other Range) bool {
-	return r.to.Less(other.from)
+func (r r64) EntirelyBefore(other tree.Range) bool {
+	return r.to.Less(other.From())
 }
 
 func lessOrEq(id1, id2 tree.ID) bool { return id1.Compare(id2) <= 0 }
 
 // entirelyWithin returns whether r is entirely contained within
 // other.
-func (r Range) coveredBy(other Range) bool {
-	return lessOrEq(other.from, r.from) && lessOrEq(r.to, other.to)
+func (r r64) CoveredBy(other tree.Range) bool {
+	return lessOrEq(other.From(), r.From()) && lessOrEq(r.To(), other.To())
 }
 
 // inMiddleOf returns whether r is inside other, but not touching the
 // edges of other.
-func (r Range) inMiddleOf(other Range) bool {
-	return other.from.Less(r.from) && r.to.Less(other.to)
+func (r r64) InMiddleOf(other tree.Range) bool {
+	return other.From().Less(r.from) && r.to.Less(other.To())
 }
 
 // overlapsStartOf returns whether r entirely overlaps the start of
 // other, but not all of other.
-func (r Range) overlapsStartOf(other Range) bool {
-	return lessOrEq(r.from, other.from) && r.to.Less(other.to)
+func (r r64) OverlapsStartOf(other tree.Range) bool {
+	return lessOrEq(r.from, other.From()) && r.to.Less(other.To())
 }
 
 // overlapsEndOf returns whether r entirely overlaps the end of
 // other, but not all of other.
-func (r Range) overlapsEndOf(other Range) bool {
-	return other.from.Less(r.from) && lessOrEq(other.to, r.to)
+func (r r64) OverlapsEndOf(other tree.Range) bool {
+	return other.From().Less(r.from) && lessOrEq(other.To(), r.to)
 }
 
 type idMaker func(a myuint64, bits uint8) tree.ID
@@ -153,18 +163,19 @@ func compareIDs(a, b myuint64) (common uint8, aZeroBSet bool) {
 
 // mergeRanges returns the minimum and sorted set of ranges that
 // cover r.
-func mergeRanges(rr []Range) (out []Range, valid bool) {
+func mergeRanges(rr []tree.Range) (out []tree.Range, valid bool) {
 	// Always return a copy of r, to avoid aliasing slice memory in
 	// the caller.
 	switch len(rr) {
 	case 0:
 		return nil, true
 	case 1:
-		return []Range{rr[0]}, true
+		out = append(out, rr[0])
+		return out, true
 	}
 
-	sort.Slice(rr, func(i, j int) bool { return rr[i].less(rr[j]) })
-	out = make([]Range, 1, len(rr))
+	sort.Slice(rr, func(i, j int) bool { return rr[i].Less(rr[j]) })
+	out = make([]tree.Range, 1, len(rr))
 	out[0] = rr[0]
 	for _, r := range rr[1:] {
 		prev := &out[len(out)-1]
@@ -173,27 +184,27 @@ func mergeRanges(rr []Range) (out []Range, valid bool) {
 			// Invalid ranges make no sense to merge, refuse to
 			// perform.
 			return nil, false
-		case prev.to.Next() == r.from:
+		case (*prev).To().Next() == r.From():
 			// prev and r touch, merge them.
 			//
 			//   prev     r
 			// f------tf-----t
-			prev.to = r.to
-		case prev.to.Less(r.from):
+			(*prev) = (*prev).SetTo(r.To())
+		case (*prev).To().Less(r.From()):
 			// No overlap and not adjacent (per previous case), no
 			// merging possible.
 			//
 			//   prev       r
 			// f------t  f-----t
 			out = append(out, r)
-		case prev.to.Less(r.to):
+		case (*prev).To().Less(r.To()):
 			// Partial overlap, update prev
 			//
 			//   prev
 			// f------t
 			//     f-----t
 			//        r
-			prev.to = r.to
+			(*prev) = (*prev).SetTo(r.To())
 		default:
 			// r entirely contained in prev, nothing to do.
 			//
@@ -209,10 +220,10 @@ func mergeRanges(rr []Range) (out []Range, valid bool) {
 // Range returns the inclusive range of IPs that p covers.
 //
 // If p is zero or otherwise invalid, Range returns the zero value.
-func RangeOfID(id tree.ID) Range {
+func RangeOfID(id tree.ID) tree.Range {
 	id = id.Masked()
 	if id == nil {
-		return Range{}
+		return r64{}
 	}
 	return RangeFrom(id.ID(), LastID(id).ID())
 }
@@ -222,7 +233,7 @@ func LastID(id tree.ID) tree.ID {
 		return nil
 	}
 	var a8 [8]byte
-	bePutUint64(a8[:], id.ID())
+	bePutUint64(a8[:], uint64(id.ID()))
 	for b := uint8(id.Length()); b < IDBitSize; b++ {
 		byteNum, bitInByte := b/8, 7-(b%8)
 		a8[byteNum] |= 1 << uint(bitInByte)

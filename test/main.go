@@ -7,6 +7,7 @@ import (
 	"github.com/henderiw/idxtable/pkg/tree/gtree"
 	"github.com/henderiw/idxtable/pkg/tree/id16"
 	"github.com/henderiw/idxtable/pkg/tree/tree16"
+	"github.com/henderiw/idxtable/pkg/tree/tree32"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -153,6 +154,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	for id := 0; id <= 4095; id++ {
 		if err := vt.ClaimID(id16.NewID(uint16(id), id16.IDBitSize), map[string]string{"id": strconv.Itoa(id)}); err != nil {
 			panic(err)
@@ -172,11 +174,11 @@ func main() {
 		fmt.Println("claimed entry", e.ID(), e.Labels())
 	}
 
-	vt, err = tree16.New(12)
+	vt, err = tree32.New(12)
 	if err != nil {
 		panic(err)
 	}
-	vt.ClaimRange("1000-2000", map[string]string{"range": "test"})
+	//vt.ClaimRange("1000-2000", map[string]string{"range": "test"})
 
 	for id := 0; id <= 4095; id++ {
 		e, err := vt.ClaimFree(map[string]string{"id": strconv.Itoa(id)})

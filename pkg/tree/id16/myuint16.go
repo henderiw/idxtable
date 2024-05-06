@@ -47,7 +47,7 @@ func Sub16(x, y, borrow uint16) (diff, borrowOut uint16) {
 	// bit of y is set (^x & y) or if they are the same (^(x ^ y)) and a borrow
 	// from the lower place happens. If that borrow happens, the result will be
 	// 1 - 1 - 1 = 0 - 0 - 1 = 1 (& diff).
-	borrowOut = ((^x & y) | (^(x ^ y) & diff)) >> 15
+	borrowOut = ((^x & y) | (^(x ^ y) & diff)) >> (IDBitSize -1)
 	return
 }
 
@@ -59,7 +59,7 @@ func Sub16(x, y, borrow uint16) (diff, borrowOut uint16) {
 func Add16(x, y, carry uint16) (sum, carryOut uint16) {
 	sum64 := uint64(x) + uint64(y) + uint64(carry)
 	sum = uint16(sum64)
-	carryOut = uint16(sum64 >> 16)
+	carryOut = uint16(sum64 >> IDBitSize)
 	return
 }
 
