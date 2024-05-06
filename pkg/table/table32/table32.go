@@ -50,7 +50,7 @@ func (r *table32) Claim(id uint64, labels labels.Set) error {
 		return fmt.Errorf("claim failed id %d already claimed", calculateIDFromIndex(r.start, newid))
 	}
 
-	treeId := id32.NewID(uint32(newid), 32)
+	treeId := id32.NewID(uint32(newid), id32.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return r.table.Claim(newid, treeEntry)
 }
@@ -65,7 +65,7 @@ func (r *table32) ClaimFree(labels labels.Set) (tree.Entry, error) {
 	if err := r.Claim(id, labels); err != nil {
 		return nil, err
 	}
-	treeId := id32.NewID(uint32(id), 32)
+	treeId := id32.NewID(uint32(id), id32.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return treeEntry, nil
 }
@@ -85,7 +85,7 @@ func (r *table32) Update(id uint64, labels labels.Set) error {
 		return err
 	}
 	newid := calculateIndex(uint32(id), r.start)
-	treeId := id32.NewID(uint32(newid), 32)
+	treeId := id32.NewID(uint32(newid), id32.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return r.table.Update(newid, treeEntry)
 }
@@ -123,8 +123,10 @@ func (r *table32) FindFree() (uint64, error) {
 func (r *table32) GetAll() tree.Entries {
 	entries := make(tree.Entries, 0, r.table.Size())
 	for _, entry := range r.table.GetAll() {
+		fmt.Println("getall", entry.ID(), entry.Data())
+		fmt.Println("getall", calculateIDFromIndex(r.start, entry.ID()))
 		// need to remap the id for the outside world
-		entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, entry.ID())), 32), entry.Data().Labels())
+		entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, entry.ID())), id32.IDBitSize), entry.Data().Labels())
 
 		entries = append(entries, entry)
 	}
@@ -140,7 +142,7 @@ func (r *table32) GetByLabel(selector labels.Selector) tree.Entries {
 		entry := iter.Value().Data()
 		if selector.Matches(entry.Labels()) {
 			// need to remap the id for the outside world
-			entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, int64(entry.ID().ID()))), 32), entry.Labels())
+			entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, int64(entry.ID().ID()))), id32.IDBitSize), entry.Labels())
 			entries = append(entries, entry)
 		}
 	}

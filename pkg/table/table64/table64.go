@@ -50,7 +50,7 @@ func (r *table64) Claim(id uint64, labels labels.Set) error {
 		return fmt.Errorf("claim failed id %d already claimed", calculateIDFromIndex(r.start, newid))
 	}
 
-	treeId := id64.NewID(uint64(newid), 64)
+	treeId := id64.NewID(uint64(newid), id64.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return r.table.Claim(newid, treeEntry)
 }
@@ -65,7 +65,7 @@ func (r *table64) ClaimFree(labels labels.Set) (tree.Entry, error) {
 	if err := r.Claim(id, labels); err != nil {
 		return nil, err
 	}
-	treeId := id64.NewID(uint64(id), 64)
+	treeId := id64.NewID(uint64(id), id64.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return treeEntry, nil
 }
@@ -85,7 +85,7 @@ func (r *table64) Update(id uint64, labels labels.Set) error {
 		return err
 	}
 	newid := calculateIndex(id, r.start)
-	treeId := id64.NewID(uint64(newid), 64)
+	treeId := id64.NewID(uint64(newid), id64.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return r.table.Update(newid, treeEntry)
 }
@@ -124,7 +124,7 @@ func (r *table64) GetAll() tree.Entries {
 	entries := make(tree.Entries, 0, r.table.Size())
 	for _, entry := range r.table.GetAll() {
 		// need to remap the id for the outside world
-		entry := tree.NewEntry(id64.NewID(uint64(calculateIDFromIndex(r.start, entry.ID())), 64), entry.Data().Labels())
+		entry := tree.NewEntry(id64.NewID(uint64(calculateIDFromIndex(r.start, entry.ID())), id64.IDBitSize), entry.Data().Labels())
 
 		entries = append(entries, entry)
 	}
@@ -140,7 +140,7 @@ func (r *table64) GetByLabel(selector labels.Selector) tree.Entries {
 		entry := iter.Value().Data()
 		if selector.Matches(entry.Labels()) {
 			// need to remap the id for the outside world
-			entry := tree.NewEntry(id64.NewID(uint64(calculateIDFromIndex(r.start, int64(entry.ID().ID()))), 64), entry.Labels())
+			entry := tree.NewEntry(id64.NewID(uint64(calculateIDFromIndex(r.start, int64(entry.ID().ID()))), id64.IDBitSize), entry.Labels())
 			entries = append(entries, entry)
 		}
 	}

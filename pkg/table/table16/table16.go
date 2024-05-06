@@ -51,7 +51,7 @@ func (r *table16) Claim(id uint64, labels labels.Set) error {
 		return fmt.Errorf("claim failed id %d already claimed", calculateIDFromIndex(r.start, newid))
 	}
 
-	treeId := id16.NewID(uint16(newid), 16)
+	treeId := id16.NewID(uint16(newid), id16.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return r.table.Claim(newid, treeEntry)
 }
@@ -66,7 +66,7 @@ func (r *table16) ClaimFree(labels labels.Set) (tree.Entry, error) {
 	if err := r.Claim(uint64(id), labels); err != nil {
 		return nil, err
 	}
-	treeId := id16.NewID(uint16(id), 16)
+	treeId := id16.NewID(uint16(id), id16.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return treeEntry, nil
 }
@@ -86,7 +86,7 @@ func (r *table16) Update(id uint64, labels labels.Set) error {
 		return err
 	}
 	newid := calculateIndex(uint16(id), r.start)
-	treeId := id16.NewID(uint16(newid), 16)
+	treeId := id16.NewID(uint16(newid), id16.IDBitSize)
 	treeEntry := tree.NewEntry(treeId.Copy(), labels)
 	return r.table.Update(newid, treeEntry)
 }
