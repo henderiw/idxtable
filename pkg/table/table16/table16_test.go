@@ -1,4 +1,4 @@
-package table12
+package table16
 
 import (
 	"fmt"
