@@ -1,4 +1,4 @@
-package table32
+package table64
 
 import (
 	"fmt"
