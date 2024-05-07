@@ -14,7 +14,7 @@ import (
 func New(start, end uint16) table.Table {
 	return &table16{
 		table: idxtable.NewTable[tree.Entry](
-			int64(end - start + 1),
+			uint64(end - start + 1),
 		),
 		start: start,
 		end:   end,
@@ -141,7 +141,7 @@ func (r *table16) GetByLabel(selector labels.Selector) tree.Entries {
 		entry := iter.Value().Data()
 		if selector.Matches(entry.Labels()) {
 			// need to remap the id for the outside world
-			entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, int64(entry.ID().ID()))), 32), entry.Labels())
+			entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, uint64(entry.ID().ID()))), 32), entry.Labels())
 			entries = append(entries, entry)
 		}
 	}
@@ -161,11 +161,11 @@ func (r *table16) validateID(id uint64) error {
 	return nil
 }
 
-func calculateIndex(id, start uint16) int64 {
+func calculateIndex(id, start uint16) uint64 {
 	// Calculate the index in the bitmap
-	return int64(id - start)
+	return uint64(id - start)
 }
 
-func calculateIDFromIndex(start uint16, id int64) uint16 {
+func calculateIDFromIndex(start uint16, id uint64) uint16 {
 	return start + uint16(id)
 }

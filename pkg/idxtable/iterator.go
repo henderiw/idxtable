@@ -1,22 +1,22 @@
 package idxtable
 
 type Iterator[T1 any] struct {
-	current int64
-	keys    []int64
-	table   map[int64]Entry[T1]
+	current uint64
+	keys    []uint64
+	table   map[uint64]Entry[T1]
 }
 
 func (r *Iterator[T1]) Value() Entry[T1] {
 	return r.table[r.keys[r.current]]
 }
 
-func (r *Iterator[T1]) ID() int64 {
+func (r *Iterator[T1]) ID() uint64 {
 	return r.keys[r.current]
 }
 
 func (r *Iterator[T1]) Next() bool {
 	r.current++
-	return r.current < int64(len(r.keys))
+	return r.current < uint64(len(r.keys))
 }
 
 func (r *Iterator[T1]) IsConsecutive() bool {

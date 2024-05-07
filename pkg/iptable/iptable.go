@@ -30,7 +30,7 @@ type IPTable interface {
 func New(from, to netip.Addr) IPTable {
 	return &ipTable{
 		table: idxtable.NewTable[table.Route](
-			int64(numIPs(from, to)),
+			uint64(numIPs(from, to)),
 		),
 		ipRange: netipx.IPRangeFrom(from, to),
 	}
@@ -161,9 +161,9 @@ func (r *ipTable) validateIP(addr string) (netip.Addr, error) {
 	return claimIP, nil
 }
 
-func calculateIndex(ip, start netip.Addr) int64 {
+func calculateIndex(ip, start netip.Addr) uint64 {
 	// Calculate the index in the bitmap
-	return new(big.Int).Sub(ipToInt(ip), ipToInt(start)).Int64()
+	return new(big.Int).Sub(ipToInt(ip), ipToInt(start)).Uint64()
 }
 
 func numIPs(startIP, endIP netip.Addr) int {
@@ -183,9 +183,9 @@ func ipToInt(ip netip.Addr) *big.Int {
 	return ipInt
 }
 
-func calculateIPFromIndex(startIP netip.Addr, id int64) netip.Addr {
+func calculateIPFromIndex(startIP netip.Addr, id uint64) netip.Addr {
 	// Calculate the IP address corresponding to the index
-	ipInt := new(big.Int).Add(ipToInt(startIP), big.NewInt(id))
+	ipInt := new(big.Int).Add(ipToInt(startIP), new(big.Int).SetUint64(id))
 	// Convert the big.Int representing the IP address to a byte slice with length 16
 	ipBytes := ipInt.Bytes()
 

@@ -9,7 +9,7 @@ import (
 
 func TestNewTable(t *testing.T) {
 	cases := map[string]struct {
-		size            int64
+		size            uint64
 		expectedEntries int
 		expectedErr     bool
 	}{
@@ -31,19 +31,19 @@ func TestNewTable(t *testing.T) {
 
 func TestClaim(t *testing.T) {
 	cases := map[string]struct {
-		size              int64
-		newSuccessEntries map[int64]string
-		newFailedEntries  map[int64]string
+		size              uint64
+		newSuccessEntries map[uint64]string
+		newFailedEntries  map[uint64]string
 		expectedEntries   int
 	}{
 
 		"Normal": {
 			size: 1000,
-			newSuccessEntries: map[int64]string{
+			newSuccessEntries: map[uint64]string{
 				10: "a",
 				11: "b",
 			},
-			newFailedEntries: map[int64]string{
+			newFailedEntries: map[uint64]string{
 				1000: "x",
 			},
 			expectedEntries: 2,
@@ -82,21 +82,21 @@ func TestClaim(t *testing.T) {
 
 func TestRelease(t *testing.T) {
 	cases := map[string]struct {
-		size                 int64
-		newSuccessEntries    map[int64]string
+		size                 uint64
+		newSuccessEntries    map[uint64]string
 		expectedEntries      int
-		deleteSuccessEntries []int64
-		deleteFailedEntries  []int64
+		deleteSuccessEntries []uint64
+		deleteFailedEntries  []uint64
 	}{
 
 		"Normal": {
 			size: 1000,
-			newSuccessEntries: map[int64]string{
+			newSuccessEntries: map[uint64]string{
 				10: "a",
 				11: "b",
 			},
-			deleteSuccessEntries: []int64{10, 11},
-			deleteFailedEntries:  []int64{20, 21},
+			deleteSuccessEntries: []uint64{10, 11},
+			deleteFailedEntries:  []uint64{20, 21},
 
 			expectedEntries: 0,
 		},
@@ -151,23 +151,23 @@ func TestRelease(t *testing.T) {
 
 func TestIterate(t *testing.T) {
 	cases := map[string]struct {
-		size              int64
-		newSuccessEntries map[int64]string
-		keys              []int64
+		size              uint64
+		newSuccessEntries map[uint64]string
+		keys              []uint64
 	}{
 
 		"Normal": {
 			size: 1000,
-			newSuccessEntries: map[int64]string{
+			newSuccessEntries: map[uint64]string{
 				0:   "a",
 				1:   "b",
 				999: "c",
 			},
-			keys: []int64{0, 1, 999},
+			keys: []uint64{0, 1, 999},
 		},
 		"None": {
 			size: 1000,
-			keys: []int64{},
+			keys: []uint64{},
 		},
 	}
 
@@ -190,10 +190,10 @@ func TestIterate(t *testing.T) {
 
 func TestClaimRange(t *testing.T) {
 	cases := map[string]struct {
-		newSuccessEntries map[int64]string
-		total             int64
-		start             int64
-		size              int64
+		newSuccessEntries map[uint64]string
+		total             uint64
+		start             uint64
+		size              uint64
 		expectedEntries   int
 		expectedErr       bool
 	}{
@@ -212,7 +212,7 @@ func TestClaimRange(t *testing.T) {
 			expectedErr:     true,
 		},
 		"ErrorOverlap": {
-			newSuccessEntries: map[int64]string{
+			newSuccessEntries: map[uint64]string{
 				0: "a",
 				1: "b",
 			},
@@ -254,8 +254,8 @@ func TestClaimRange(t *testing.T) {
 
 func TestClaimSize(t *testing.T) {
 	cases := map[string]struct {
-		size            int64
-		total           int64
+		size            uint64
+		total           uint64
 		expectedEntries int
 		expectedErr     bool
 	}{

@@ -28,7 +28,7 @@ func TestClaim(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			vt, err := New(id16.IDBitSize)
+			vt, err := New(12)
 			assert.NoError(t, err)
 
 			for id, d := range tc.newSuccessEntries {

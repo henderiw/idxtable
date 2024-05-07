@@ -13,7 +13,7 @@ import (
 func New(start, end uint32) table.Table {
 	return &table32{
 		table: idxtable.NewTable[tree.Entry](
-			int64(end - start + 1),
+			uint64(end - start + 1),
 		),
 		start: start,
 		end:   end,
@@ -143,7 +143,7 @@ func (r *table32) GetByLabel(selector labels.Selector) tree.Entries {
 		entry := iter.Value().Data()
 		if selector.Matches(entry.Labels()) {
 			// need to remap the id for the outside world
-			entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, int64(entry.ID().ID()))), id32.IDBitSize), entry.Labels())
+			entry := tree.NewEntry(id32.NewID(uint32(calculateIDFromIndex(r.start, uint64(entry.ID().ID()))), id32.IDBitSize), entry.Labels())
 			entries = append(entries, entry)
 		}
 	}
@@ -163,11 +163,11 @@ func (r *table32) validateID(id uint64) error {
 	return nil
 }
 
-func calculateIndex(id, start uint32) int64 {
+func calculateIndex(id, start uint32) uint64 {
 	// Calculate the index in the bitmap
-	return int64(id - start)
+	return uint64(id - start)
 }
 
-func calculateIDFromIndex(start uint32, id int64) uint32 {
+func calculateIDFromIndex(start uint32, id uint64) uint32 {
 	return start + uint32(id)
 }
