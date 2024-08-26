@@ -227,7 +227,6 @@ func (r *tree64) GetAll() tree.Entries {
 
 	iter := r.Iterate()
 	for iter.Next() {
-		fmt.Println("getall 64", iter.Entry())
 		entries = append(entries, iter.Entry())
 	}
 
