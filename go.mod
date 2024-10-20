@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tj/assert v0.0.3
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
-	k8s.io/apimachinery v0.32.0-alpha.2
+	k8s.io/apimachinery v0.31.0
 )
 
 require (
