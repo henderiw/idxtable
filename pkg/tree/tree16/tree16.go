@@ -16,7 +16,6 @@ func New(length uint8) (gtree.GTree, error) {
 	if length > id16.IDBitSize {
 		return nil, fmt.Errorf("cannot create a tree which bitlength > %d, got: %d", id16.IDBitSize, length)
 	}
-	//fmt.Println("size16", uint64(1<<length - 1))
 	return &tree16{
 		m:      new(sync.RWMutex),
 		tree:   tree.NewTree[tree.Entry](id16.IsLeftBitSet, id16.IDBitSize),
@@ -102,7 +101,6 @@ func (r *tree16) ClaimRange(s string, labels labels.Set) error {
 	// get each entry and validate owner
 
 	for _, treeId := range trange.IDs() {
-		fmt.Println("range entry", treeId.String())
 		treeEntry := tree.NewEntry(treeId.Copy(), labels)
 		if err := r.set(treeId, treeEntry); err != nil {
 			return err
@@ -134,7 +132,6 @@ func (r *tree16) findFree() (uint16, error) {
 	if availableID == nil {
 		return 0, fmt.Errorf("no free id available")
 	}
-	//fmt.Println("findFree, availableID", availableID.ID())
 	if err := r.validate(availableID); err != nil {
 		return 0, err
 	}
@@ -161,7 +158,6 @@ func (r *tree16) ReleaseByLabel(selector labels.Selector) error {
 	defer r.m.Unlock()
 
 	for _, e := range entries {
-		fmt.Println("release by label", e.String())
 		if err := r.del(e.ID().Copy(), e); err != nil {
 			return err
 		}

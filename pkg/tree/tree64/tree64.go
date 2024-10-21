@@ -14,7 +14,6 @@ func New(length uint8) (gtree.GTree, error) {
 	if length > id64.IDBitSize {
 		return nil, fmt.Errorf("cannot create a tree which bitlength > %d, got: %d", id64.IDBitSize, length)
 	}
-	fmt.Println("size64", 1<<length-1)
 	return &tree64{
 		m:      new(sync.RWMutex),
 		tree:   tree.NewTree[tree.Entry](id64.IsLeftBitSet, id64.IDBitSize),
@@ -69,10 +68,7 @@ func (r *tree64) ClaimID(id tree.ID, labels labels.Set) error {
 		return err
 	}
 
-	fmt.Println("claimID", id.ID())
 	treeEntry := tree.NewEntry(id.Copy(), labels)
-
-	fmt.Println("claimID", treeEntry.ID())
 
 	r.m.Lock()
 	defer r.m.Unlock()
@@ -254,7 +250,6 @@ func (r *tree64) Iterate() *gtree.GTreeIterator {
 }
 
 func (r *tree64) validate(id tree.ID) error {
-	fmt.Println("validate", id.ID(), r.size)
 	if id.ID() > uint64(r.size) {
 		return fmt.Errorf("max id allowed is %d, got %d", r.size, id.ID())
 	}

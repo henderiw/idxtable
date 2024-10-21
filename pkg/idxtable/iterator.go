@@ -20,7 +20,6 @@ func (r *Iterator[T1]) Next() bool {
 }
 
 func (r *Iterator[T1]) IsConsecutive() bool {
-	//fmt.Println("id:", r.current, "prevId", r.keys[r.current-1], "currId", r.keys[r.current]-1)
 	if r.current < 1 {
 		return false
 	}

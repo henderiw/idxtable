@@ -166,12 +166,10 @@ func compareIDs(a, b myuint16) (common uint8, aZeroBSet bool) {
 func mergeRanges(rr []tree.Range) (out []tree.Range, valid bool) {
 	// Always return a copy of r, to avoid aliasing slice memory in
 	// the caller.
-	//fmt.Println("mergeRanges", len(rr), rr)
 	switch len(rr) {
 	case 0:
 		return nil, true
 	case 1:
-		//fmt.Println("range 1", rr[0].To(), rr[0].From())
 		return []tree.Range{rr[0]}, true
 	}
 
@@ -179,7 +177,6 @@ func mergeRanges(rr []tree.Range) (out []tree.Range, valid bool) {
 	out = make([]tree.Range, 1, len(rr))
 	out[0] = rr[0]
 	for _, r := range rr[1:] {
-		//fmt.Println("range", r.To(), r.From())
 		prev := &out[len(out)-1]
 		switch {
 		case !r.IsValid():

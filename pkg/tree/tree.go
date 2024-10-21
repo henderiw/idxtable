@@ -585,16 +585,6 @@ func (r *Tree[T]) PrintNodes(nodeIndex uint) {
 	for id, n := range r.nodes {
 		fmt.Println("node", id, n)
 	}
-
-	/*
-		node := &r.nodes[nodeIndex]
-		if node.Left != 0 {
-			fmt.Println("nodeLeft", node)
-		}
-		if node.Right != 0 {
-			fmt.Println("nodeRigth", node)
-		}
-	*/
 }
 
 // note: this is only used for unit testing

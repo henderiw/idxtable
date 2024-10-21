@@ -14,7 +14,6 @@ func New(length uint8) (gtree.GTree, error) {
 	if length > id32.IDBitSize {
 		return nil, fmt.Errorf("cannot create a tree which bitlength > %d, got: %d", id32.IDBitSize, length)
 	}
-	fmt.Println("size32", 1<<length - 1)
 	return &tree32{
 		m:      new(sync.RWMutex),
 		tree:   tree.NewTree[tree.Entry](id32.IsLeftBitSet, id32.IDBitSize),

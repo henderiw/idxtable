@@ -76,7 +76,6 @@ func (r myid16) Overlaps(b tree.ID) bool {
 	ida := r.id & mask6[minbits]
 	idb := uint16(b.ID()) & mask6[minbits]
 
-	//fmt.Println("overlaps", ida, idb)
 	return ida == idb
 }
 
