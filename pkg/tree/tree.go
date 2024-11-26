@@ -1,6 +1,8 @@
 package tree
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func init() {
 	initBuildLeftMasks()
@@ -37,6 +39,7 @@ const (
 )
 
 type Tree[T any] struct {
+	name             string         // name of the tree
 	isLeftBitSetFn   IsLeftBitSetFn // input
 	length           uint8          // input
 	nodes            []treeNode[T]  // root is always at [1] - [0] is unused
@@ -46,8 +49,10 @@ type Tree[T any] struct {
 
 type IsLeftBitSetFn func(id uint64) bool
 
-func NewTree[T any](isLeftBitSetFn IsLeftBitSetFn, length uint8) *Tree[T] {
+func NewTree[T any](name string, isLeftBitSetFn IsLeftBitSetFn, length uint8) *Tree[T] {
+
 	return &Tree[T]{
+		name:             name,
 		isLeftBitSetFn:   isLeftBitSetFn,
 		length:           length,
 		nodes:            make([]treeNode[T], 2), // index 0 is skipped, 1 is root
@@ -163,9 +168,12 @@ func (r *Tree[T]) deleteVal(buf []T, nodeIndex uint, matchTag T, matchFunc Match
 // Set the single value for a node - overwrites what's there
 // Returns whether the val count at this id was increased, and how many vals at this id
 func (r *Tree[T]) Set(id ID, val T) (bool, int) {
-	return r.add(id, val,
+	b, idx := r.add(id, val,
 		func(T, T) bool { return true },
 		func(T) T { return val })
+
+	//fmt.Println("set", r.name, id, b, idx)
+	return b, idx
 }
 
 // Add adds a tag to the tree
@@ -176,6 +184,7 @@ func (r *Tree[T]) Add(id ID, val T, matchFunc MatchesFunc[T]) (bool, int) {
 }
 
 func (r *Tree[T]) add(id ID, val T, matchFunc MatchesFunc[T], updateFunc UpdatesFunc[T]) (bool, int) {
+
 	// make sure we have more than enough capacity before we start adding to the tree, which invalidates pointers into the array
 	if (len(r.availableIndexes) + cap(r.nodes)) < (len(r.nodes) + 10) {
 		temp := make([]treeNode[T], len(r.nodes), (cap(r.nodes)+1)*2)
@@ -222,7 +231,7 @@ func (r *Tree[T]) add(id ID, val T, matchFunc MatchesFunc[T], updateFunc Updates
 		}
 		matchCount := node.MatchCount(id)
 		if matchCount == 0 {
-			panic(fmt.Sprintf("Should not have traversed to a node with no prefix match - node length: %d; id length: %d", node.Length, id.Length()))
+			panic(fmt.Sprintf("tree %s Should not have traversed to a node with no prefix match - node length: %d; id length: %d id %v", r.name, node.Length, id.Length(), id))
 		}
 
 		if matchCount == id.Length() {

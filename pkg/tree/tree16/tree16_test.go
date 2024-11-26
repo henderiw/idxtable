@@ -1,6 +1,7 @@
 package tree16
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/henderiw/idxtable/pkg/tree/id16"
@@ -28,7 +29,7 @@ func TestClaim(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			vt, err := New(12)
+			vt, err := New("dummy", 12)
 			assert.NoError(t, err)
 
 			for id, d := range tc.newSuccessEntries {
@@ -57,6 +58,48 @@ func TestClaim(t *testing.T) {
 			}
 			if len(vt.GetAll()) != tc.expectedEntries {
 				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(vt.GetAll()))
+			}
+		})
+	}
+}
+
+func TestRandomClaim(t *testing.T) {
+	cases := map[string]struct {
+		tranges []string
+		entries []uint16
+	}{
+		"test": {
+			tranges: []string{"10-0", "16383-65535"},
+			entries: []uint16{},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+
+			vt, err := New("dummy", id16.IDBitSize)
+			assert.NoError(t, err)
+
+			for _, trange := range tc.tranges {
+				prange, err := id16.ParseRange(trange)
+				assert.NoError(t, err)
+				for _, id := range prange.IDs() {
+					err := vt.ClaimID(id, labels.Set{})
+					assert.NoError(t, err)
+				}
+			}
+
+			for _, id := range tc.entries {
+				tid := id16.NewID(id, 16)
+				err := vt.ClaimID(tid, labels.Set{})
+				assert.NoError(t, err)
+			}
+
+			vt.PrintNodes()
+			vt.PrintValues()
+
+			for _, e := range vt.GetAll() {
+				fmt.Println("entry", e)
 			}
 		})
 	}

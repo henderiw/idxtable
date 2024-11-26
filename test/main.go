@@ -150,7 +150,7 @@ func main() {
 
 	fmt.Println("lastID", id16.LastID(id16.NewID(0, 16-12)))
 
-	vt, err := tree16.New(12)
+	vt, err := tree16.New("dummy", 12)
 	if err != nil {
 		panic(err)
 	}
@@ -162,7 +162,7 @@ func main() {
 		fmt.Println("claimed entry", id)
 	}
 
-	vt, err = tree16.New(12)
+	vt, err = tree16.New("dummy", 12)
 	if err != nil {
 		panic(err)
 	}
@@ -174,7 +174,7 @@ func main() {
 		fmt.Println("claimed entry", e.ID(), e.Labels())
 	}
 
-	vt, err = tree32.New(12)
+	vt, err = tree32.New("dummy", 12)
 	if err != nil {
 		panic(err)
 	}
@@ -205,7 +205,7 @@ func main() {
 		panic(err)
 	}
 
-	vt, err = tree16.New(12)
+	vt, err = tree16.New("dummy", 12)
 	if err != nil {
 		panic(err)
 	}

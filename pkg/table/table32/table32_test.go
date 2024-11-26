@@ -11,7 +11,7 @@ import (
 
 func TestClaim(t *testing.T) {
 	cases := map[string]struct {
-		trange         string
+		trange            string
 		newSuccessEntries map[uint64]labels.Set
 		newFailedEntries  map[uint64]labels.Set
 		expectedEntries   int

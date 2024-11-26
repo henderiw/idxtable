@@ -10,13 +10,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-func New(length uint8) (gtree.GTree, error) {
+func New(name string, length uint8) (gtree.GTree, error) {
 	if length > id32.IDBitSize {
 		return nil, fmt.Errorf("cannot create a tree which bitlength > %d, got: %d", id32.IDBitSize, length)
 	}
 	return &tree32{
 		m:      new(sync.RWMutex),
-		tree:   tree.NewTree[tree.Entry](id32.IsLeftBitSet, id32.IDBitSize),
+		tree:   tree.NewTree[tree.Entry](name, id32.IsLeftBitSet, id32.IDBitSize),
 		size:   1<<length - 1,
 		length: length,
 	}, nil
@@ -67,7 +67,9 @@ func (r *tree32) ClaimID(id tree.ID, labels labels.Set) error {
 	if err := r.validate(id); err != nil {
 		return err
 	}
+	fmt.Println("treeid32", id.String())
 	treeEntry := tree.NewEntry(id.Copy(), labels)
+	fmt.Println("treeEntry", treeEntry.ID().String())
 
 	r.m.Lock()
 	defer r.m.Unlock()

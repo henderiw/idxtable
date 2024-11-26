@@ -1,6 +1,7 @@
 package tree32
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/henderiw/idxtable/pkg/tree/id32"
@@ -28,7 +29,7 @@ func TestClaim(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			vt, err := New(id32.IDBitSize-2)
+			vt, err := New("dummy", id32.IDBitSize - 2)
 			assert.NoError(t, err)
 
 			for id, d := range tc.newSuccessEntries {
@@ -57,6 +58,48 @@ func TestClaim(t *testing.T) {
 			}
 			if len(vt.GetAll()) != tc.expectedEntries {
 				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(vt.GetAll()))
+			}
+		})
+	}
+}
+
+func TestASClaim(t *testing.T) {
+	cases := map[string]struct {
+		trange  string
+		entries []uint32
+	}{
+		"test": {
+			trange:  "65000-65100",
+			entries: []uint32{65535},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+
+			vt, err := New("dummy", id32.IDBitSize)
+			assert.NoError(t, err)
+
+			trange, err := id32.ParseRange(tc.trange)
+			assert.NoError(t, err)
+			for _, id := range trange.IDs() {
+				err := vt.ClaimID(id, labels.Set{})
+				assert.NoError(t, err)
+			}
+
+			for _, id := range tc.entries {
+
+				tid := id32.NewID(id, 32)
+
+				err := vt.ClaimID(tid, labels.Set{})
+				assert.NoError(t, err)
+			}
+
+			vt.PrintNodes()
+			vt.PrintValues()
+
+			for _, e := range vt.GetAll() {
+				fmt.Println("entry", e)
 			}
 		})
 	}

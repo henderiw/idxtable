@@ -28,7 +28,7 @@ func NewID(id uint16, length uint8) tree.ID {
 }
 
 func (r myid16) Copy() tree.ID {
-	return &myid16{
+	return myid16{
 		id:     r.id,
 		length: r.length,
 	}

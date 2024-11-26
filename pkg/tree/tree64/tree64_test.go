@@ -1,7 +1,6 @@
 package tree64
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/henderiw/idxtable/pkg/tree/id64"
@@ -29,7 +28,7 @@ func TestClaim(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			vt, err := New(id64.IDBitSize - 32)
+			vt, err := New("dummy", id64.IDBitSize - 32)
 			assert.NoError(t, err)
 
 			for id, d := range tc.newSuccessEntries {
@@ -61,13 +60,8 @@ func TestClaim(t *testing.T) {
 				}
 			}
 
-			vt.PrintNodes()
-			vt.PrintValues()
-
-			for _, e := range vt.GetAll() {
-				e := e
-				fmt.Println("64bit entry", e.ID(), e.Labels())
-			}
+			//vt.PrintNodes()
+			//vt.PrintValues()
 
 			if len(vt.GetAll()) != tc.expectedEntries {
 				t.Errorf("%s: -want %d, +got: %d\n", name, tc.expectedEntries, len(vt.GetAll()))

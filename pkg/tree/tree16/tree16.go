@@ -12,13 +12,13 @@ import (
 
 //const IDBitSize = uint8(16)
 
-func New(length uint8) (gtree.GTree, error) {
+func New(name string, length uint8) (gtree.GTree, error) {
 	if length > id16.IDBitSize {
 		return nil, fmt.Errorf("cannot create a tree which bitlength > %d, got: %d", id16.IDBitSize, length)
 	}
 	return &tree16{
 		m:      new(sync.RWMutex),
-		tree:   tree.NewTree[tree.Entry](id16.IsLeftBitSet, id16.IDBitSize),
+		tree:   tree.NewTree[tree.Entry](name, id16.IsLeftBitSet, id16.IDBitSize),
 		size:   1<<length - 1,
 		length: length,
 	}, nil
