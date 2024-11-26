@@ -67,9 +67,7 @@ func (r *tree32) ClaimID(id tree.ID, labels labels.Set) error {
 	if err := r.validate(id); err != nil {
 		return err
 	}
-	fmt.Println("treeid32", id.String())
 	treeEntry := tree.NewEntry(id.Copy(), labels)
-	fmt.Println("treeEntry", treeEntry.ID().String())
 
 	r.m.Lock()
 	defer r.m.Unlock()
